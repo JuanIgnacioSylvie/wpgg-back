@@ -9,7 +9,7 @@ var BcryptHashProvider_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BcryptHashProvider = void 0;
 const common_1 = require("@nestjs/common");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 let BcryptHashProvider = BcryptHashProvider_1 = class BcryptHashProvider {
     async hash(plain) {
         return bcrypt.hash(plain, BcryptHashProvider_1.ROUNDS);
