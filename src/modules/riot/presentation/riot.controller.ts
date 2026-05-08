@@ -1,0 +1,108 @@
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
+import { CurrentUser } from '@shared/infrastructure/decorators/current-user.decorator';
+import { JwtAuthGuard } from '@shared/infrastructure/guards/jwt-auth.guard';
+import { GetMatchHistoryUseCase } from '../application/use-cases/get-match-history.use-case';
+import { GetRankedStatsUseCase } from '../application/use-cases/get-ranked-stats.use-case';
+import { GetSummonerProfileUseCase } from '../application/use-cases/get-summoner-profile.use-case';
+import { LinkRiotAccountUseCase } from '../application/use-cases/link-riot-account.use-case';
+import { LinkRiotAccountRequestDto } from './dto/link-riot-account-request.dto';
+
+@Controller('riot')
+@UseGuards(JwtAuthGuard)
+export class RiotController {
+  constructor(
+    private readonly linkRiot: LinkRiotAccountUseCase,
+    private readonly summonerProfile: GetSummonerProfileUseCase,
+    private readonly matchHistory: GetMatchHistoryUseCase,
+    private readonly rankedStats: GetRankedStatsUseCase,
+  ) {}
+
+  @Post('link')
+  @HttpCode(HttpStatus.CREATED)
+  async link(
+    @CurrentUser() userId: string,
+    @Body() body: LinkRiotAccountRequestDto,
+  ) {
+    const account = await this.linkRiot.execute({
+      userId,
+      gameName: body.gameName,
+      tagLine: body.tagLine,
+      region: body.region,
+    });
+    return {
+      id: account.id,
+      userId: account.userId,
+      puuid: account.puuid,
+      gameName: account.gameName,
+      tagLine: account.tagLine,
+      region: account.region,
+      summonerId: account.summonerId,
+      accountId: account.accountId,
+      linkedAt: account.linkedAt,
+    };
+  }
+
+  @Get('summoner')
+  async getSummoner(@CurrentUser() userId: string) {
+    const s = await this.summonerProfile.execute(userId);
+    return {
+      puuid: s.puuid,
+      summonerId: s.summonerId,
+      accountId: s.accountId,
+      profileIconId: s.profileIconId,
+      summonerLevel: s.summonerLevel,
+      revisionDate: s.revisionDate,
+    };
+  }
+
+  @Get('matches/:matchId')
+  async getMatch(
+    @CurrentUser() userId: string,
+    @Param('matchId') matchId: string,
+  ) {
+    const m = await this.matchHistory.executeMatchDetail(userId, matchId);
+    return {
+      matchId: m.matchId,
+      gameMode: m.gameMode,
+      gameDuration: m.gameDuration,
+      gameCreation: m.gameCreation,
+      participants: m.participants,
+    };
+  }
+
+  @Get('matches')
+  async getMatches(@CurrentUser() userId: string) {
+    const list = await this.matchHistory.execute(userId);
+    return list.map((m) => ({
+      matchId: m.matchId,
+      gameMode: m.gameMode,
+      gameDuration: m.gameDuration,
+      gameCreation: m.gameCreation,
+      participants: m.participants,
+    }));
+  }
+
+  @Get('ranked')
+  async getRanked(@CurrentUser() userId: string) {
+    const rows = await this.rankedStats.execute(userId);
+    return rows.map((r) => ({
+      queueType: r.queueType,
+      tier: r.tier,
+      rank: r.rank,
+      leaguePoints: r.leaguePoints,
+      wins: r.wins,
+      losses: r.losses,
+      hotStreak: r.hotStreak,
+      winRate: r.getWinRate(),
+    }));
+  }
+}
