@@ -3,10 +3,12 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   MinLength,
   validateSync,
 } from 'class-validator';
+import { isRelaxEnv } from './relax-env';
 
 enum NodeEnvironment {
   Development = 'development',
@@ -14,7 +16,26 @@ enum NodeEnvironment {
   Test = 'test',
 }
 
+const RELAX_ENV_DEFAULTS: Record<string, unknown> = {
+  DATABASE_URL: 'postgresql://localhost:5432/wpgg?schema=public',
+  JWT_SECRET: '0'.repeat(32),
+  JWT_ACCESS_EXPIRY: '15m',
+  JWT_REFRESH_EXPIRY: '7d',
+  RIOT_API_KEY: 'RGAPI-dev-placeholder-replace-in-env',
+  PORT: 3000,
+  NODE_ENV: NodeEnvironment.Development,
+  ALLOWED_ORIGINS: '*',
+};
+
 class EnvironmentVariables {
+  @IsOptional()
+  @IsString()
+  RELAX_VALIDATIONS?: string;
+
+  @IsOptional()
+  @IsString()
+  DEV_BYPASS_USER_ID?: string;
+
   @IsString()
   @IsNotEmpty({ message: 'DATABASE_URL is required' })
   DATABASE_URL: string;
@@ -52,10 +73,21 @@ class EnvironmentVariables {
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {
-  // Coerce PORT to a number before validation
+  const merged: Record<string, unknown> = isRelaxEnv(config['RELAX_VALIDATIONS'])
+    ? { ...RELAX_ENV_DEFAULTS, ...config }
+    : { ...config };
+
+  const portRaw = merged['PORT'];
+  const portResolved =
+    portRaw === undefined || portRaw === '' || portRaw === null
+      ? isRelaxEnv(merged['RELAX_VALIDATIONS'])
+        ? Number(RELAX_ENV_DEFAULTS['PORT'])
+        : undefined
+      : Number(portRaw);
+
   const rawConfig = {
-    ...config,
-    PORT: config['PORT'] !== undefined ? Number(config['PORT']) : undefined,
+    ...merged,
+    PORT: portResolved,
   };
 
   const validatedConfig = plainToInstance(EnvironmentVariables, rawConfig, {
