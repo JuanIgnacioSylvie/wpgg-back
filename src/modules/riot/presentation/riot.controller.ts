@@ -32,22 +32,22 @@ export class RiotController {
     @CurrentUser() userId: string,
     @Body() body: LinkRiotAccountRequestDto,
   ) {
-    const account = await this.linkRiot.execute({
+    const summoner = await this.linkRiot.execute({
       userId,
       gameName: body.gameName,
       tagLine: body.tagLine,
       region: body.region,
     });
     return {
-      id: account.id,
-      userId: account.userId,
-      puuid: account.puuid,
-      gameName: account.gameName,
-      tagLine: account.tagLine,
-      region: account.region,
-      summonerId: account.summonerId,
-      accountId: account.accountId,
-      linkedAt: account.linkedAt,
+      id: summoner.id,
+      userId: summoner.userId,
+      puuid: summoner.puuid,
+      gameName: summoner.gameName,
+      tagLine: summoner.tagLine,
+      region: summoner.region,
+      summonerId: summoner.summonerId,
+      accountId: summoner.accountId,
+      linkedAt: summoner.linkedAt,
     };
   }
 
