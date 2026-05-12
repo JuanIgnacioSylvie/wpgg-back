@@ -23,9 +23,17 @@ import {
   USER_REPOSITORY,
 } from '../../domain/repositories/user.repository.interface';
 
-export type LoginUserInput = { email: string; password: string };
+export type LoginUserInput = {
+  email: string;
+  password: string;
+  rememberMe?: boolean;
+};
 
-export type LoginUserOutput = { accessToken: string; refreshToken: string };
+export type LoginUserOutput = {
+  accessToken: string;
+  refreshToken: string;
+  rememberMe: boolean;
+};
 
 @Injectable()
 export class LoginUserUseCase {
@@ -60,9 +68,10 @@ export class LoginUserUseCase {
         5,
       );
 
+      const rememberMe = input.rememberMe === true;
       const accessToken = this.jwtProvider.generateAccessToken(user.id);
       const { token: rawRefreshToken, expiresAt } =
-        this.jwtProvider.generateRefreshToken(user.id);
+        this.jwtProvider.generateRefreshToken(user.id, { rememberMe });
       const tokenHash = await this.hashProvider.hash(rawRefreshToken);
 
       const refreshEntity = RefreshTokenEntity.create({
@@ -72,7 +81,7 @@ export class LoginUserUseCase {
         expiresAt,
       });
       await this.refreshTokenRepository.save(refreshEntity);
-      return { accessToken, refreshToken: rawRefreshToken };
+      return { accessToken, refreshToken: rawRefreshToken, rememberMe };
     } catch {
       throw new InternalServerErrorException();
     }

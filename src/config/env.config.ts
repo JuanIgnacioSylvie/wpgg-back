@@ -20,7 +20,6 @@ const RELAX_ENV_DEFAULTS: Record<string, unknown> = {
   DATABASE_URL: 'postgresql://localhost:5432/wpgg?schema=public',
   JWT_SECRET: '0'.repeat(32),
   JWT_ACCESS_EXPIRY: '15m',
-  JWT_REFRESH_EXPIRY: '7d',
   RIOT_API_KEY: 'RGAPI-dev-placeholder-replace-in-env',
   PORT: 3000,
   NODE_ENV: NodeEnvironment.Development,
@@ -50,10 +49,6 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty({ message: 'JWT_ACCESS_EXPIRY is required' })
   JWT_ACCESS_EXPIRY: string;
-
-  @IsString()
-  @IsNotEmpty({ message: 'JWT_REFRESH_EXPIRY is required' })
-  JWT_REFRESH_EXPIRY: string;
 
   @IsString()
   @IsNotEmpty({ message: 'RIOT_API_KEY is required' })

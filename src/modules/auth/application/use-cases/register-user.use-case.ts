@@ -64,7 +64,7 @@ export class RegisterUserUseCase {
 
     const accessToken = this.jwtProvider.generateAccessToken(savedUser.id);
     const { token: rawRefreshToken, expiresAt } =
-      this.jwtProvider.generateRefreshToken(savedUser.id);
+      this.jwtProvider.generateRefreshToken(savedUser.id, { rememberMe: false });
     const tokenHash = await this.hashProvider.hash(rawRefreshToken);
 
     const refreshEntity = RefreshTokenEntity.create({
