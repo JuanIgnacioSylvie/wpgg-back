@@ -12,14 +12,35 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.validate = validate;
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
+const relax_env_1 = require("./relax-env");
 var NodeEnvironment;
 (function (NodeEnvironment) {
     NodeEnvironment["Development"] = "development";
     NodeEnvironment["Production"] = "production";
     NodeEnvironment["Test"] = "test";
 })(NodeEnvironment || (NodeEnvironment = {}));
+const RELAX_ENV_DEFAULTS = {
+    DATABASE_URL: 'postgresql://localhost:5432/wpgg?schema=public',
+    JWT_SECRET: '0'.repeat(32),
+    JWT_ACCESS_EXPIRY: '15m',
+    JWT_REFRESH_EXPIRY: '7d',
+    RIOT_API_KEY: 'RGAPI-dev-placeholder-replace-in-env',
+    PORT: 3000,
+    NODE_ENV: NodeEnvironment.Development,
+    ALLOWED_ORIGINS: '*',
+};
 class EnvironmentVariables {
 }
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], EnvironmentVariables.prototype, "RELAX_VALIDATIONS", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], EnvironmentVariables.prototype, "DEV_BYPASS_USER_ID", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)({ message: 'DATABASE_URL is required' }),
@@ -64,9 +85,18 @@ __decorate([
     __metadata("design:type", String)
 ], EnvironmentVariables.prototype, "ALLOWED_ORIGINS", void 0);
 function validate(config) {
+    const merged = (0, relax_env_1.isRelaxEnv)(config['RELAX_VALIDATIONS'])
+        ? { ...RELAX_ENV_DEFAULTS, ...config }
+        : { ...config };
+    const portRaw = merged['PORT'];
+    const portResolved = portRaw === undefined || portRaw === '' || portRaw === null
+        ? (0, relax_env_1.isRelaxEnv)(merged['RELAX_VALIDATIONS'])
+            ? Number(RELAX_ENV_DEFAULTS['PORT'])
+            : undefined
+        : Number(portRaw);
     const rawConfig = {
-        ...config,
-        PORT: config['PORT'] !== undefined ? Number(config['PORT']) : undefined,
+        ...merged,
+        PORT: portResolved,
     };
     const validatedConfig = (0, class_transformer_1.plainToInstance)(EnvironmentVariables, rawConfig, {
         enableImplicitConversion: true,

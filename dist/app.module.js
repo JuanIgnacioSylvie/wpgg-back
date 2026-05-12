@@ -12,6 +12,7 @@ const core_1 = require("@nestjs/core");
 const config_1 = require("@nestjs/config");
 const throttler_1 = require("@nestjs/throttler");
 const env_config_1 = require("./config/env.config");
+const relax_env_1 = require("./config/relax-env");
 const auth_module_1 = require("./modules/auth/presentation/auth.module");
 const riot_module_1 = require("./modules/riot/presentation/riot.module");
 const ddragon_module_1 = require("./modules/ddragon/presentation/ddragon.module");
@@ -30,12 +31,16 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             riot_module_1.RiotModule,
             ddragon_module_1.DdragonModule,
-            throttler_1.ThrottlerModule.forRoot([
-                {
-                    ttl: 60000,
-                    limit: 60,
-                },
-            ]),
+            throttler_1.ThrottlerModule.forRootAsync({
+                imports: [config_1.ConfigModule],
+                inject: [config_1.ConfigService],
+                useFactory: (config) => [
+                    {
+                        ttl: 60_000,
+                        limit: (0, relax_env_1.isRelaxFromConfig)(config) ? 1_000_000 : 60,
+                    },
+                ],
+            }),
         ],
         providers: [
             {

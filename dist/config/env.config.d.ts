@@ -4,6 +4,8 @@ declare enum NodeEnvironment {
     Test = "test"
 }
 declare class EnvironmentVariables {
+    RELAX_VALIDATIONS?: string;
+    DEV_BYPASS_USER_ID?: string;
     DATABASE_URL: string;
     JWT_SECRET: string;
     JWT_ACCESS_EXPIRY: string;
