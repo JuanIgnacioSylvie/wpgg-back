@@ -1,3 +1,4 @@
 /.env
 /.kiro
 node_modules
+dist
