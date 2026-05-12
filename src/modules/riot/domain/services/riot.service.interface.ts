@@ -44,7 +44,7 @@ export interface RankedEntryDto {
 }
 
 export interface IRiotService {
-  getAccountByRiotId(
+  getSummonerByRiotId(
     gameName: string,
     tagLine: string,
     region: string,

@@ -64,7 +64,7 @@ export class RiotServiceAxios implements IRiotService {
     }
   }
 
-  async getAccountByRiotId(
+  async getSummonerByRiotId(
     gameName: string,
     tagLine: string,
     region: string,

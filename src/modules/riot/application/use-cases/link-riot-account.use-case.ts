@@ -34,14 +34,14 @@ export class LinkRiotAccountUseCase {
       throw new ConflictException('User already has a linked Riot account');
     }
 
-    const account = await this.riotService.getAccountByRiotId(
+    const summoner = await this.riotService.getSummonerByRiotId(
       input.gameName,
       input.tagLine,
       input.region,
     );
 
     const existingByPuuid = await this.riotAccountRepository.findByPuuid(
-      account.puuid,
+      summoner.puuid,
     );
     if (existingByPuuid) {
       throw new ConflictException(
@@ -49,20 +49,20 @@ export class LinkRiotAccountUseCase {
       );
     }
 
-    const summoner = await this.riotService.getSummonerByPuuid(
-      account.puuid,
+    const platformSummoner = await this.riotService.getSummonerByPuuid(
+      summoner.puuid,
       input.region,
     );
 
     const entity = RiotAccountEntity.create({
       id: randomUUID(),
       userId: input.userId,
-      puuid: account.puuid,
-      gameName: account.gameName,
-      tagLine: account.tagLine,
+      puuid: summoner.puuid,
+      gameName: summoner.gameName,
+      tagLine: summoner.tagLine,
       region: input.region,
-      summonerId: summoner.summonerId,
-      accountId: summoner.accountId,
+      summonerId: platformSummoner.summonerId,
+      accountId: platformSummoner.accountId,
     });
 
     return this.riotAccountRepository.save(entity);
