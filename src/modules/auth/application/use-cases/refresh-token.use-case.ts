@@ -22,7 +22,11 @@ import {
 
 export type RefreshTokenInput = { refreshToken: string };
 
-export type RefreshTokenOutput = { accessToken: string; refreshToken: string };
+export type RefreshTokenOutput = {
+  accessToken: string;
+  refreshToken: string;
+  rememberMe: boolean;
+};
 
 @Injectable()
 export class RefreshTokenUseCase {
@@ -66,7 +70,9 @@ export class RefreshTokenUseCase {
 
     const accessToken = this.jwtProvider.generateAccessToken(matched.userId);
     const { token: newRawRefresh, expiresAt } =
-      this.jwtProvider.generateRefreshToken(matched.userId);
+      this.jwtProvider.generateRefreshToken(matched.userId, {
+        rememberMe: claims.rememberMe,
+      });
     const tokenHash = await this.hashProvider.hash(newRawRefresh);
 
     const newEntity = RefreshTokenEntity.create({
@@ -88,6 +94,10 @@ export class RefreshTokenUseCase {
       throw new InternalServerErrorException();
     }
 
-    return { accessToken, refreshToken: newRawRefresh };
+    return {
+      accessToken,
+      refreshToken: newRawRefresh,
+      rememberMe: claims.rememberMe,
+    };
   }
 }
