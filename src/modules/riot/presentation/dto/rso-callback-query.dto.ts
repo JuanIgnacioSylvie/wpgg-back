@@ -16,4 +16,9 @@ export class RsoCallbackQueryDto {
   @IsOptional()
   @IsString()
   error_description?: string;
+
+  /** OIDC: issuer; Riot includes this on the authorization redirect. */
+  @IsOptional()
+  @IsString()
+  iss?: string;
 }
