@@ -14,7 +14,6 @@ import { ExchangeRsoCodeUseCase } from '../application/use-cases/exchange-rso-co
 import { GetRsoAuthorizeUrlUseCase } from '../application/use-cases/get-rso-authorize-url.use-case';
 import { GetRsoUserinfoUseCase } from '../application/use-cases/get-rso-userinfo.use-case';
 import { RefreshRsoTokensUseCase } from '../application/use-cases/refresh-rso-tokens.use-case';
-import { RsoCallbackQueryDto } from './dto/rso-callback-query.dto';
 import { RsoRefreshRequestDto } from './dto/rso-refresh-request.dto';
 import { RsoSignInQueryDto } from './dto/rso-sign-in-query.dto';
 import { RsoUserinfoRequestDto } from './dto/rso-userinfo-request.dto';
@@ -60,21 +59,24 @@ export class RiotRsoController {
 
   @Get('oauth2-callback')
   async oauth2Callback(
-    @Query() query: RsoCallbackQueryDto,
+    @Query('code') code?: string,
+    @Query('state') state?: string,
+    @Query('error') error?: string,
+    @Query('error_description') errorDescription?: string,
     @Query('includeUserinfo') includeUserinfo?: string,
   ) {
-    if (query.error) {
+    if (error) {
       throw new BadRequestException({
-        error: query.error,
-        error_description: query.error_description,
+        error,
+        error_description: errorDescription,
       });
     }
-    if (!query.code?.trim() || !query.state?.trim()) {
+    if (!code?.trim() || !state?.trim()) {
       throw new BadRequestException('Missing code or state');
     }
     return this.exchangeCode.execute({
-      code: query.code,
-      state: query.state,
+      code,
+      state,
       includeUserinfo:
         includeUserinfo === 'true' || includeUserinfo === '1',
     });
