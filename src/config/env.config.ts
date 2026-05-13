@@ -65,6 +65,29 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty({ message: 'ALLOWED_ORIGINS is required' })
   ALLOWED_ORIGINS: string;
+
+  /** Riot Sign On — optional; required only for `riot/rso/*` routes */
+  @IsOptional()
+  @IsString()
+  RIOT_RSO_CLIENT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  RIOT_RSO_CLIENT_SECRET?: string;
+
+  /** Private-key JWT client assertion (alternative to RIOT_RSO_CLIENT_SECRET) */
+  @IsOptional()
+  @IsString()
+  RIOT_RSO_CLIENT_ASSERTION?: string;
+
+  @IsOptional()
+  @IsString()
+  RIOT_RSO_REDIRECT_URI?: string;
+
+  /** Space-separated scopes (default: openid offline_access cpid) */
+  @IsOptional()
+  @IsString()
+  RIOT_RSO_SCOPES?: string;
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {
