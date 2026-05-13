@@ -9,6 +9,7 @@ import {
   Query,
   Res,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { ExchangeRsoCodeUseCase } from '../application/use-cases/exchange-rso-code.use-case';
 import { GetRsoAuthorizeUrlUseCase } from '../application/use-cases/get-rso-authorize-url.use-case';
@@ -22,10 +23,12 @@ import { RsoUserinfoRequestDto } from './dto/rso-userinfo-request.dto';
  * Riot Sign On (OAuth2 / OIDC) — public routes for authorization code flow.
  * Configure RIOT_RSO_CLIENT_ID, RIOT_RSO_REDIRECT_URI, and either
  * RIOT_RSO_CLIENT_SECRET or RIOT_RSO_CLIENT_ASSERTION.
+ * Optional: RIOT_RSO_SUCCESS_REDIRECT_URL to send the browser to your SPA after login.
  */
 @Controller('riot/rso')
 export class RiotRsoController {
   constructor(
+    private readonly config: ConfigService,
     private readonly getAuthorizeUrl: GetRsoAuthorizeUrlUseCase,
     private readonly exchangeCode: ExchangeRsoCodeUseCase,
     private readonly refreshTokens: RefreshRsoTokensUseCase,
@@ -59,13 +62,26 @@ export class RiotRsoController {
 
   @Get('oauth2-callback')
   async oauth2Callback(
+    @Res({ passthrough: true }) res: Response,
     @Query('code') code?: string,
     @Query('state') state?: string,
     @Query('error') error?: string,
     @Query('error_description') errorDescription?: string,
     @Query('includeUserinfo') includeUserinfo?: string,
   ) {
+    const successRedirect =
+      this.config.get<string>('RIOT_RSO_SUCCESS_REDIRECT_URL')?.trim() ?? '';
+
     if (error) {
+      if (successRedirect) {
+        const target = new URL(successRedirect);
+        target.searchParams.set('error', error);
+        if (errorDescription) {
+          target.searchParams.set('error_description', errorDescription);
+        }
+        res.redirect(HttpStatus.FOUND, target.toString());
+        return;
+      }
       throw new BadRequestException({
         error,
         error_description: errorDescription,
@@ -74,12 +90,38 @@ export class RiotRsoController {
     if (!code?.trim() || !state?.trim()) {
       throw new BadRequestException('Missing code or state');
     }
-    return this.exchangeCode.execute({
+    const payload = await this.exchangeCode.execute({
       code,
       state,
       includeUserinfo:
         includeUserinfo === 'true' || includeUserinfo === '1',
     });
+
+    if (successRedirect) {
+      const fragment = new URLSearchParams();
+      fragment.set('access_token', payload.access_token);
+      if (payload.refresh_token) {
+        fragment.set('refresh_token', payload.refresh_token);
+      }
+      if (payload.id_token) {
+        fragment.set('id_token', payload.id_token);
+      }
+      fragment.set('expires_in', String(payload.expires_in));
+      fragment.set('token_type', payload.token_type);
+      if (payload.scope) {
+        fragment.set('scope', payload.scope);
+      }
+      if (payload.sub_sid) {
+        fragment.set('sub_sid', payload.sub_sid);
+      }
+
+      const target = new URL(successRedirect);
+      target.hash = fragment.toString();
+      res.redirect(HttpStatus.FOUND, target.toString());
+      return;
+    }
+
+    return payload;
   }
 
   @Post('refresh')

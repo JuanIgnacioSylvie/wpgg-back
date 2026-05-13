@@ -84,6 +84,16 @@ class EnvironmentVariables {
   @IsString()
   RIOT_RSO_REDIRECT_URI?: string;
 
+  /**
+   * After a successful `/riot/rso/oauth2-callback`, redirect (302) here instead of
+   * returning JSON. Tokens are appended in the URL **hash** (fragment), e.g.
+   * `https://your-app.com/auth/riot#access_token=...&refresh_token=...`.
+   * On OAuth error, redirects with `?error=&error_description=` (query).
+   */
+  @IsOptional()
+  @IsString()
+  RIOT_RSO_SUCCESS_REDIRECT_URL?: string;
+
   /** Space-separated scopes (default: openid offline_access cpid) */
   @IsOptional()
   @IsString()
