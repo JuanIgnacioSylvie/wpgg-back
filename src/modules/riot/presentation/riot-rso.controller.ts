@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Logger,
   Post,
   Body,
   Query,
@@ -32,6 +33,8 @@ import { RsoUserinfoRequestDto } from './dto/rso-userinfo-request.dto';
  */
 @Controller('riot/rso')
 export class RiotRsoController {
+  private readonly logger = new Logger(RiotRsoController.name);
+
   constructor(
     private readonly config: ConfigService,
     private readonly getAuthorizeUrl: GetRsoAuthorizeUrlUseCase,
@@ -125,12 +128,18 @@ export class RiotRsoController {
       });
       attachSessionCookies(res, this.config, session);
 
-      const { code: riotSession } = await this.createRiotSessionCode.execute({
-        userId: session.userId,
-      });
-
       const target = new URL(successRedirect);
-      target.searchParams.set('riot_session', riotSession);
+      try {
+        const { code: riotSession } = await this.createRiotSessionCode.execute({
+          userId: session.userId,
+        });
+        target.searchParams.set('riot_session', riotSession);
+      } catch (err) {
+        this.logger.warn(
+          `riot_session code not created (run prisma migrate deploy if table missing): ${err instanceof Error ? err.message : err}`,
+        );
+      }
+
       res.redirect(HttpStatus.FOUND, target.toString());
       return;
     }
