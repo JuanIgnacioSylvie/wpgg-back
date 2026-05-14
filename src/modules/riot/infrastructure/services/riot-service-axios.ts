@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import {
   IRiotService,
   MatchDto,
@@ -13,6 +13,52 @@ import {
   RiotAccountDto,
   SummonerDto,
 } from '../../domain/services/riot.service.interface';
+
+type RiotErrorBody = { status?: { message?: string } };
+
+function getRiotApiErrorMessage(data: unknown, maxLen = 400): string | undefined {
+  if (data == null) {
+    return undefined;
+  }
+  if (typeof data === 'string') {
+    const t = data.trim();
+    if (!t || t.startsWith('<')) {
+      return undefined;
+    }
+    return t.length > maxLen ? `${t.slice(0, maxLen)}…` : t;
+  }
+  if (typeof data === 'object') {
+    const msg = (data as RiotErrorBody).status?.message;
+    if (typeof msg === 'string' && msg.trim()) {
+      const t = msg.trim();
+      return t.length > maxLen ? `${t.slice(0, maxLen)}…` : t;
+    }
+  }
+  return undefined;
+}
+
+/** Maps a non-2xx Riot HTTP response to a Nest HTTP exception with Riot's message when present. */
+function throwFromRiotResponse(
+  res: Pick<AxiosResponse, 'status' | 'data'>,
+  options: { notFoundFallback?: string } = {},
+): never {
+  const riotMsg = getRiotApiErrorMessage(res.data);
+  const fallback = `Riot API error (HTTP ${res.status})`;
+  const message = riotMsg ?? fallback;
+
+  if (res.status === 404) {
+    throw new NotFoundException(
+      riotMsg ?? options.notFoundFallback ?? fallback,
+    );
+  }
+  if (res.status === 429) {
+    throw new HttpException(message, HttpStatus.TOO_MANY_REQUESTS);
+  }
+  if (res.status >= 500 || res.status === 0) {
+    throw new HttpException(message, HttpStatus.BAD_GATEWAY);
+  }
+  throw new HttpException(message, HttpStatus.BAD_GATEWAY);
+}
 
 const AMERICAS = new Set(['NA1', 'BR1', 'LA1', 'LA2', 'OC1']);
 const EUROPE = new Set(['EUW1', 'EUN1', 'TR1', 'RU']);
@@ -72,26 +118,10 @@ export class RiotServiceAxios implements IRiotService {
     const cluster = routingCluster(region);
     const url = `https://${cluster}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
     const res = await this.safeGet(url);
-    if (res.status === 404) {
-      throw new NotFoundException('Riot account not found');
-    }
-    if (res.status === 429) {
-      throw new HttpException(
-        'Rate limit exceeded, try again later',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-    if (res.status >= 500 || res.status === 0) {
-      throw new HttpException(
-        'Riot API unavailable, please try again later',
-        HttpStatus.BAD_GATEWAY,
-      );
-    }
     if (res.status !== 200) {
-      throw new HttpException(
-        'Riot API unavailable, please try again later',
-        HttpStatus.BAD_GATEWAY,
-      );
+      throwFromRiotResponse(res, {
+        notFoundFallback: 'Riot account not found',
+      });
     }
     const d = res.data as {
       puuid: string;
@@ -108,20 +138,10 @@ export class RiotServiceAxios implements IRiotService {
     const host = platformHost(region);
     const url = `https://${host}/lol/summoner/v4/summoners/by-puuid/${puuid}`;
     const res = await this.safeGet(url);
-    if (res.status === 404) {
-      throw new NotFoundException();
-    }
-    if (res.status >= 500 || res.status === 0) {
-      throw new HttpException(
-        'Riot API unavailable, please try again later',
-        HttpStatus.BAD_GATEWAY,
-      );
-    }
     if (res.status !== 200) {
-      throw new HttpException(
-        'Riot API unavailable, please try again later',
-        HttpStatus.BAD_GATEWAY,
-      );
+      throwFromRiotResponse(res, {
+        notFoundFallback: 'Summoner not found',
+      });
     }
     const d = res.data as {
       puuid: string;
@@ -149,11 +169,10 @@ export class RiotServiceAxios implements IRiotService {
     const cluster = routingCluster(region);
     const url = `https://${cluster}.api.riotgames.com/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=${count}`;
     const res = await this.safeGet(url);
-    if (res.status >= 400) {
-      throw new HttpException(
-        res.data?.status?.message ?? 'Riot API error',
-        res.status,
-      );
+    if (res.status !== 200) {
+      throwFromRiotResponse(res, {
+        notFoundFallback: 'Match history not found',
+      });
     }
     return res.data as string[];
   }
@@ -162,14 +181,8 @@ export class RiotServiceAxios implements IRiotService {
     const cluster = routingCluster(region);
     const url = `https://${cluster}.api.riotgames.com/lol/match/v5/matches/${matchId}`;
     const res = await this.safeGet(url);
-    if (res.status === 404) {
-      throw new NotFoundException();
-    }
-    if (res.status >= 400) {
-      throw new HttpException(
-        res.data?.status?.message ?? 'Riot API error',
-        res.status,
-      );
+    if (res.status !== 200) {
+      throwFromRiotResponse(res, { notFoundFallback: 'Match not found' });
     }
     const body = res.data as {
       metadata?: { matchId?: string };
@@ -215,20 +228,11 @@ export class RiotServiceAxios implements IRiotService {
     const host = platformHost(region);
     const url = `https://${host}/lol/league/v4/entries/by-summoner/${summonerId}`;
     const res = await this.safeGet(url);
-    if (res.status >= 500 || res.status === 0) {
-      throw new HttpException(
-        'Riot API unavailable, please try again later',
-        HttpStatus.BAD_GATEWAY,
-      );
-    }
     if (res.status === 404) {
       return [];
     }
     if (res.status !== 200) {
-      throw new HttpException(
-        'Riot API unavailable, please try again later',
-        HttpStatus.BAD_GATEWAY,
-      );
+      throwFromRiotResponse(res);
     }
     const rows = res.data as Array<{
       queueType: string;
