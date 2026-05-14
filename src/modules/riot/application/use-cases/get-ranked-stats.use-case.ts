@@ -32,7 +32,7 @@ export class GetRankedStatsUseCase {
 
     try {
       const rows = await this.riotService.getRankedStats(
-        account.summonerId,
+        account.puuid,
         account.region,
       );
       return rows.map(

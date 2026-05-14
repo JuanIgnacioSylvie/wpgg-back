@@ -150,14 +150,14 @@ export class RiotServiceAxios implements IRiotService {
       });
     }
     const d = res.data as {
-      puuid: string;
-      id: string;
-      accountId: string;
-      profileIconId: number;
-      summonerLevel: number;
-      revisionDate: number;
+      puuid?: string;
+      id?: string;
+      accountId?: string;
+      profileIconId?: number;
+      summonerLevel?: number;
+      revisionDate?: number;
     };
-    if (d.puuid == null || d.id == null || d.accountId == null) {
+    if (d.puuid == null) {
       throw new HttpException(
         'Invalid summoner response from Riot API',
         HttpStatus.BAD_GATEWAY,
@@ -165,11 +165,11 @@ export class RiotServiceAxios implements IRiotService {
     }
     return {
       puuid: d.puuid,
-      summonerId: String(d.id),
-      accountId: String(d.accountId),
-      profileIconId: d.profileIconId,
-      summonerLevel: d.summonerLevel,
-      revisionDate: d.revisionDate,
+      summonerId: d.id != null ? String(d.id) : '',
+      accountId: d.accountId != null ? String(d.accountId) : '',
+      profileIconId: d.profileIconId ?? 0,
+      summonerLevel: d.summonerLevel ?? 0,
+      revisionDate: d.revisionDate ?? 0,
     };
   }
 
@@ -233,12 +233,9 @@ export class RiotServiceAxios implements IRiotService {
     };
   }
 
-  async getRankedStats(
-    summonerId: string,
-    region: string,
-  ): Promise<RankedEntryDto[]> {
+  async getRankedStats(puuid: string, region: string): Promise<RankedEntryDto[]> {
     const host = platformHost(region);
-    const url = `https://${host}/lol/league/v4/entries/by-summoner/${summonerId}`;
+    const url = `https://${host}/lol/league/v4/entries/by-puuid/${encodeURIComponent(puuid)}`;
     const res = await this.safeGet(url);
     if (res.status === 404) {
       return [];

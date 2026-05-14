@@ -8,7 +8,9 @@ export interface RiotAccountDto {
 
 export interface SummonerDto {
   puuid: string;
+  /** Legacy encrypted summoner id; empty when Riot omits it from Summoner v4. */
   summonerId: string;
+  /** Legacy account id; empty when Riot omits it from Summoner v4. */
   accountId: string;
   profileIconId: number;
   summonerLevel: number;
@@ -52,5 +54,6 @@ export interface IRiotService {
   getSummonerByPuuid(puuid: string, region: string): Promise<SummonerDto>;
   getMatchHistory(puuid: string, region: string, count: number): Promise<string[]>;
   getMatchDetail(matchId: string, region: string): Promise<MatchDto>;
-  getRankedStats(summonerId: string, region: string): Promise<RankedEntryDto[]>;
+  /** @param puuid Encrypted PUUID (same as account-v1 / match-v5). */
+  getRankedStats(puuid: string, region: string): Promise<RankedEntryDto[]>;
 }
