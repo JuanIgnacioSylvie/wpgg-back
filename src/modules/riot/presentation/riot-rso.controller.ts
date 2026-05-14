@@ -10,6 +10,8 @@ import {
   Res,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { attachSessionCookies } from '@modules/auth/infrastructure/auth-session-cookies';
+import { EstablishRiotOauthSessionUseCase } from '@modules/auth/application/use-cases/establish-riot-oauth-session.use-case';
 import type { Response } from 'express';
 import { ExchangeRsoCodeUseCase } from '../application/use-cases/exchange-rso-code.use-case';
 import { GetRsoAuthorizeUrlUseCase } from '../application/use-cases/get-rso-authorize-url.use-case';
@@ -23,7 +25,8 @@ import { RsoUserinfoRequestDto } from './dto/rso-userinfo-request.dto';
  * Riot Sign On (OAuth2 / OIDC) — public routes for authorization code flow.
  * Configure RIOT_RSO_CLIENT_ID, RIOT_RSO_REDIRECT_URI, and either
  * RIOT_RSO_CLIENT_SECRET or RIOT_RSO_CLIENT_ASSERTION.
- * Optional: RIOT_RSO_SUCCESS_REDIRECT_URL to send the browser to your SPA after login.
+ * Optional: RIOT_RSO_SUCCESS_REDIRECT_URL — after login, issues wpgg cookies and redirects
+ * there without putting tokens in the URL fragment.
  */
 @Controller('riot/rso')
 export class RiotRsoController {
@@ -33,6 +36,7 @@ export class RiotRsoController {
     private readonly exchangeCode: ExchangeRsoCodeUseCase,
     private readonly refreshTokens: RefreshRsoTokensUseCase,
     private readonly getRsoUserinfo: GetRsoUserinfoUseCase,
+    private readonly establishWpggSession: EstablishRiotOauthSessionUseCase,
   ) {}
 
   /** Minimal HTML index with a Sign In link (tutorial-style). */
@@ -98,25 +102,27 @@ export class RiotRsoController {
     });
 
     if (successRedirect) {
-      const fragment = new URLSearchParams();
-      fragment.set('access_token', payload.access_token);
-      if (payload.refresh_token) {
-        fragment.set('refresh_token', payload.refresh_token);
-      }
-      if (payload.id_token) {
-        fragment.set('id_token', payload.id_token);
-      }
-      fragment.set('expires_in', String(payload.expires_in));
-      fragment.set('token_type', payload.token_type);
-      if (payload.scope) {
-        fragment.set('scope', payload.scope);
-      }
-      if (payload.sub_sid) {
-        fragment.set('sub_sid', payload.sub_sid);
+      const claims = payload.id_token_claims;
+      let riotSub =
+        claims && typeof claims.sub === 'string' ? claims.sub : undefined;
+      if (!riotSub) {
+        try {
+          const ui = await this.getRsoUserinfo.execute(payload.access_token);
+          riotSub = ui.sub;
+        } catch {
+          const target = new URL(successRedirect);
+          target.searchParams.set('error', 'rso_no_subject');
+          res.redirect(HttpStatus.FOUND, target.toString());
+          return;
+        }
       }
 
+      const session = await this.establishWpggSession.execute({
+        riotSub,
+      });
+      attachSessionCookies(res, this.config, session);
+
       const target = new URL(successRedirect);
-      target.hash = fragment.toString();
       res.redirect(HttpStatus.FOUND, target.toString());
       return;
     }

@@ -86,9 +86,10 @@ class EnvironmentVariables {
 
   /**
    * After a successful `/riot/rso/oauth2-callback`, redirect (302) here instead of
-   * returning JSON. Tokens are appended in the URL **hash** (fragment), e.g.
-   * `https://your-app.com/auth/riot#access_token=...&refresh_token=...`.
-   * On OAuth error, redirects with `?error=&error_description=` (query).
+   * returning JSON. The API issues wpgg session cookies (`accessToken`, `refreshToken`,
+   * httpOnly) on the API host, then redirects to this URL **without** tokens in the URL.
+   * On OAuth error, redirects with `?error=&error_description=` (query); missing Riot
+   * subject uses `?error=rso_no_subject`.
    */
   @IsOptional()
   @IsString()

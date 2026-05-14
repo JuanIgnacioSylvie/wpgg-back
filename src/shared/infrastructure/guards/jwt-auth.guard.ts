@@ -12,6 +12,7 @@ import {
   JWT_PROVIDER,
 } from '@modules/auth/domain/providers/jwt.provider.interface';
 import { isRelaxFromConfig } from '../../../config/relax-env';
+import { ACCESS_TOKEN_COOKIE } from '@modules/auth/infrastructure/auth-session-cookies';
 
 const DEFAULT_BYPASS_USER_ID = '00000000-0000-4000-8000-000000000000';
 
@@ -28,8 +29,14 @@ export class JwtAuthGuard implements CanActivate {
 
     if (isRelaxFromConfig(this.configService)) {
       const header = req.headers.authorization;
-      if (header?.startsWith('Bearer ')) {
-        const token = header.slice(7);
+      const bearerToken = header?.startsWith('Bearer ')
+        ? header.slice(7)
+        : undefined;
+      const cookieToken = req.cookies?.[ACCESS_TOKEN_COOKIE] as
+        | string
+        | undefined;
+      const token = bearerToken ?? cookieToken;
+      if (token) {
         const payload = this.jwtProvider.verifyAccessToken(token);
         if (payload) {
           (req as Request & { user: { userId: string } }).user = {
@@ -48,10 +55,16 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     const header = req.headers.authorization;
-    if (!header?.startsWith('Bearer ')) {
+    const bearerToken = header?.startsWith('Bearer ')
+      ? header.slice(7)
+      : undefined;
+    const cookieToken = req.cookies?.[ACCESS_TOKEN_COOKIE] as
+      | string
+      | undefined;
+    const token = bearerToken ?? cookieToken;
+    if (!token) {
       throw new UnauthorizedException('Unauthorized');
     }
-    const token = header.slice(7);
     const payload = this.jwtProvider.verifyAccessToken(token);
     if (!payload) {
       throw new UnauthorizedException('Unauthorized');

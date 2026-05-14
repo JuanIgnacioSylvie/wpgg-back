@@ -6,6 +6,7 @@ import { SharedModule } from '@shared/shared.module';
 import { RegisterUserUseCase } from '../application/use-cases/register-user.use-case';
 import { LoginUserUseCase } from '../application/use-cases/login-user.use-case';
 import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.use-case';
+import { EstablishRiotOauthSessionUseCase } from '../application/use-cases/establish-riot-oauth-session.use-case';
 import { LogoutUserUseCase } from '../application/use-cases/logout-user.use-case';
 import { USER_REPOSITORY } from '../domain/repositories/user.repository.interface';
 import { REFRESH_TOKEN_REPOSITORY } from '../domain/repositories/refresh-token.repository.interface';
@@ -42,7 +43,8 @@ import { AuthController } from './auth.controller';
     LoginUserUseCase,
     RefreshTokenUseCase,
     LogoutUserUseCase,
+    EstablishRiotOauthSessionUseCase,
   ],
-  exports: [JWT_PROVIDER, JwtAuthGuard],
+  exports: [JWT_PROVIDER, JwtAuthGuard, EstablishRiotOauthSessionUseCase],
 })
 export class AuthModule {}
