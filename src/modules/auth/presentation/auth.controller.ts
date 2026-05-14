@@ -23,6 +23,7 @@ import { LogoutUserUseCase } from '../application/use-cases/logout-user.use-case
 import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.use-case';
 import { RegisterUserUseCase } from '../application/use-cases/register-user.use-case';
 import { LoginRequestDto } from './dto/login-request.dto';
+import { RefreshRequestDto } from './dto/refresh-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
 
 @Controller('auth')
@@ -67,10 +68,14 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(
+    @Body() body: RefreshRequestDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const raw = req.cookies?.[REFRESH_TOKEN_COOKIE];
+    const fromCookie = req.cookies?.[REFRESH_TOKEN_COOKIE];
+    const fromBody =
+      typeof body.refreshToken === 'string' ? body.refreshToken.trim() : '';
+    const raw = (fromCookie && fromCookie.trim()) || fromBody || undefined;
     if (!raw) {
       throw new UnauthorizedException('Unauthorized');
     }
@@ -80,6 +85,13 @@ export class AuthController {
       refreshToken: out.refreshToken,
       rememberMe: out.rememberMe,
     });
+    const usedBodyOnly = !fromCookie?.trim() && Boolean(fromBody);
+    if (usedBodyOnly) {
+      return {
+        accessToken: out.accessToken,
+        refreshToken: out.refreshToken,
+      };
+    }
     return { accessToken: out.accessToken };
   }
 
