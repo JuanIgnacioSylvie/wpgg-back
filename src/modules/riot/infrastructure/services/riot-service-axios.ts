@@ -128,6 +128,12 @@ export class RiotServiceAxios implements IRiotService {
       gameName: string;
       tagLine: string;
     };
+    if (d.puuid == null || d.gameName == null || d.tagLine == null) {
+      throw new HttpException(
+        'Invalid account response from Riot API',
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
     return { puuid: d.puuid, gameName: d.gameName, tagLine: d.tagLine };
   }
 
@@ -151,10 +157,16 @@ export class RiotServiceAxios implements IRiotService {
       summonerLevel: number;
       revisionDate: number;
     };
+    if (d.puuid == null || d.id == null || d.accountId == null) {
+      throw new HttpException(
+        'Invalid summoner response from Riot API',
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
     return {
       puuid: d.puuid,
-      summonerId: d.id,
-      accountId: d.accountId,
+      summonerId: String(d.id),
+      accountId: String(d.accountId),
       profileIconId: d.profileIconId,
       summonerLevel: d.summonerLevel,
       revisionDate: d.revisionDate,

@@ -58,6 +58,7 @@ import { AuthController } from './auth.controller';
   exports: [
     JWT_PROVIDER,
     JwtAuthGuard,
+    USER_REPOSITORY,
     EstablishRiotOauthSessionUseCase,
     CreateRiotSessionExchangeCodeUseCase,
   ],

@@ -1,5 +1,14 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import {
+  IUserRepository,
+  USER_REPOSITORY,
+} from '@modules/auth/domain/repositories/user.repository.interface';
 import { RiotAccountEntity } from '../../domain/entities/riot-account.entity';
 import {
   IRiotAccountRepository,
@@ -20,6 +29,8 @@ export type LinkRiotAccountInput = {
 @Injectable()
 export class LinkRiotAccountUseCase {
   constructor(
+    @Inject(USER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
     @Inject(RIOT_ACCOUNT_REPOSITORY)
     private readonly riotAccountRepository: IRiotAccountRepository,
     @Inject(RIOT_SERVICE)
@@ -27,6 +38,13 @@ export class LinkRiotAccountUseCase {
   ) {}
 
   async execute(input: LinkRiotAccountInput): Promise<RiotAccountEntity> {
+    const user = await this.userRepository.findById(input.userId);
+    if (!user) {
+      throw new NotFoundException(
+        'User not found. Sign in again or create a new account.',
+      );
+    }
+
     const existingByUser = await this.riotAccountRepository.findByUserId(
       input.userId,
     );
