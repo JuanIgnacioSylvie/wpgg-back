@@ -7,8 +7,36 @@ export const ACCESS_TOKEN_COOKIE = 'accessToken';
 const REFRESH_COOKIE_MAX_AGE_MS_SHORT = 24 * 60 * 60 * 1000;
 const REFRESH_COOKIE_MAX_AGE_MS_LONG = 30 * 24 * 60 * 60 * 1000;
 
-function secureCookie(config: ConfigService): boolean {
-  return config.get<string>('NODE_ENV') === 'production';
+type SameSiteOption = 'lax' | 'strict' | 'none';
+
+/** Cross-site SPA → API: production defaults to SameSite=None + Secure. */
+export function sessionCookiePolicy(config: ConfigService): {
+  sameSite: SameSiteOption;
+  secure: boolean;
+} {
+  const isProd = config.get<string>('NODE_ENV') === 'production';
+  const configured = config.get<'none' | 'lax' | 'strict'>(
+    'SESSION_COOKIE_SAME_SITE',
+  );
+  let sameSite: SameSiteOption =
+    configured === 'none' || configured === 'lax' || configured === 'strict'
+      ? configured
+      : isProd
+        ? 'none'
+        : 'lax';
+
+  const secureOverride = config.get<string>('SESSION_COOKIE_SECURE')?.trim();
+  let secure: boolean;
+  if (sameSite === 'none') {
+    secure = true;
+  } else if (secureOverride === 'true') {
+    secure = true;
+  } else if (secureOverride === 'false') {
+    secure = false;
+  } else {
+    secure = isProd;
+  }
+  return { sameSite, secure };
 }
 
 export function accessCookieMaxAgeMs(config: ConfigService): number {
@@ -39,10 +67,11 @@ export function refreshCookieOptions(
   config: ConfigService,
   rememberMe: boolean,
 ) {
+  const { sameSite, secure } = sessionCookiePolicy(config);
   return {
     httpOnly: true,
-    secure: secureCookie(config),
-    sameSite: 'strict' as const,
+    secure,
+    sameSite,
     maxAge: rememberMe
       ? REFRESH_COOKIE_MAX_AGE_MS_LONG
       : REFRESH_COOKIE_MAX_AGE_MS_SHORT,
@@ -51,10 +80,11 @@ export function refreshCookieOptions(
 }
 
 export function accessCookieOptions(config: ConfigService) {
+  const { sameSite, secure } = sessionCookiePolicy(config);
   return {
     httpOnly: true,
-    secure: secureCookie(config),
-    sameSite: 'strict' as const,
+    secure,
+    sameSite,
     maxAge: accessCookieMaxAgeMs(config),
     path: '/',
   };

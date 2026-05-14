@@ -1,6 +1,7 @@
 import { plainToInstance } from 'class-transformer';
 import {
   IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -65,6 +66,25 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty({ message: 'ALLOWED_ORIGINS is required' })
   ALLOWED_ORIGINS: string;
+
+  /**
+   * Session cookies (`accessToken`, `refreshToken`): SameSite policy.
+   * Default: `none` in production (cross-site SPA + API), `lax` otherwise.
+   * `none` always implies `Secure: true` (browser requirement).
+   */
+  @IsOptional()
+  @IsString()
+  @IsIn(['none', 'lax', 'strict'])
+  SESSION_COOKIE_SAME_SITE?: 'none' | 'lax' | 'strict';
+
+  /**
+   * Override Secure flag on session cookies (`true` | `false`).
+   * Ignored when SameSite is `none` (Secure stays true).
+   */
+  @IsOptional()
+  @IsString()
+  @IsIn(['true', 'false'])
+  SESSION_COOKIE_SECURE?: string;
 
   /** Riot Sign On — optional; required only for `riot/rso/*` routes */
   @IsOptional()
