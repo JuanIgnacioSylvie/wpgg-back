@@ -29,7 +29,9 @@ import { RsoUserinfoRequestDto } from './dto/rso-userinfo-request.dto';
  * RIOT_RSO_CLIENT_SECRET or RIOT_RSO_CLIENT_ASSERTION.
  * Optional: RIOT_RSO_SUCCESS_REDIRECT_URL — after login, issues wpgg cookies and redirects
  * there with `?riot_session=<one-time code>` (plus cookies on the API host). The SPA redeems
- * the code via `POST /auth/riot-session`. On OAuth error, `?error=` / `?error_description=`; missing Riot subject: `?error=rso_no_subject`.
+ * the code via `POST /auth/riot-session`. If the code cannot be stored, redirects with
+ * `?error=riot_session_unavailable` (no session cookies). On OAuth error, `?error=` /
+ * `?error_description=`; missing Riot subject: `?error=rso_no_subject`.
  */
 @Controller('riot/rso')
 export class RiotRsoController {
@@ -126,20 +128,31 @@ export class RiotRsoController {
       const session = await this.establishWpggSession.execute({
         riotSub,
       });
-      attachSessionCookies(res, this.config, session);
 
       const target = new URL(successRedirect);
+      let riotSessionPlain: string;
       try {
-        const { code: riotSession } = await this.createRiotSessionCode.execute({
+        const { code } = await this.createRiotSessionCode.execute({
           userId: session.userId,
         });
-        target.searchParams.set('riot_session', riotSession);
+        riotSessionPlain = code;
       } catch (err) {
-        this.logger.warn(
-          `riot_session code not created (run prisma migrate deploy if table missing): ${err instanceof Error ? err.message : err}`,
+        this.logger.error(
+          `riot_session code not created: ${err instanceof Error ? err.stack ?? err.message : err}`,
         );
+        target.searchParams.set('error', 'riot_session_unavailable');
+        const hint =
+          err instanceof Error ? err.message : 'session_code_failed';
+        target.searchParams.set(
+          'error_description',
+          hint.length > 240 ? `${hint.slice(0, 237)}...` : hint,
+        );
+        res.redirect(HttpStatus.FOUND, target.toString());
+        return;
       }
 
+      attachSessionCookies(res, this.config, session);
+      target.searchParams.set('riot_session', riotSessionPlain);
       res.redirect(HttpStatus.FOUND, target.toString());
       return;
     }

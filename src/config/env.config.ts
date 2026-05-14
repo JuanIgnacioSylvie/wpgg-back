@@ -117,9 +117,10 @@ class EnvironmentVariables {
 
   /**
    * After a successful `/riot/rso/oauth2-callback`, redirect (302) here instead of
-   * returning JSON. Sets wpgg session cookies on the API host and appends
-   * `?riot_session=<one-time code>` for `POST /auth/riot-session`. On OAuth error,
-   * `?error=` / `?error_description=`; missing Riot subject: `?error=rso_no_subject`.
+   * returning JSON. Appends `?riot_session=<one-time code>` and then sets wpgg session
+   * cookies on the API host. If the one-time code cannot be stored, redirects with
+   * `?error=riot_session_unavailable` (no cookies). SPA: `POST /auth/riot-session` with the code.
+   * On OAuth error, `?error=` / `?error_description=`; missing Riot subject: `?error=rso_no_subject`.
    */
   @IsOptional()
   @IsString()
