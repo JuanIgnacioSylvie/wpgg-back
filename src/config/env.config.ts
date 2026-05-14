@@ -6,6 +6,8 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Max,
+  Min,
   MinLength,
   validateSync,
 } from 'class-validator';
@@ -86,6 +88,15 @@ class EnvironmentVariables {
   @IsIn(['true', 'false'])
   SESSION_COOKIE_SECURE?: string;
 
+  /**
+   * Lifetime in seconds for `riot_session` one-time codes (default 600, min 60, max 86400).
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(60)
+  @Max(86400)
+  RIOT_SESSION_CODE_TTL_SEC?: number;
+
   /** Riot Sign On — optional; required only for `riot/rso/*` routes */
   @IsOptional()
   @IsString()
@@ -106,10 +117,9 @@ class EnvironmentVariables {
 
   /**
    * After a successful `/riot/rso/oauth2-callback`, redirect (302) here instead of
-   * returning JSON. The API issues wpgg session cookies (`accessToken`, `refreshToken`,
-   * httpOnly) on the API host, then redirects to this URL **without** tokens in the URL.
-   * On OAuth error, redirects with `?error=&error_description=` (query); missing Riot
-   * subject uses `?error=rso_no_subject`.
+   * returning JSON. Sets wpgg session cookies on the API host and appends
+   * `?riot_session=<one-time code>` for `POST /auth/riot-session`. On OAuth error,
+   * `?error=` / `?error_description=`; missing Riot subject: `?error=rso_no_subject`.
    */
   @IsOptional()
   @IsString()

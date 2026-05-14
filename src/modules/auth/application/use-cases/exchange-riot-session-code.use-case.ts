@@ -3,9 +3,9 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { RefreshTokenEntity } from '../../domain/entities/refresh-token.entity';
-import { UserEntity } from '../../domain/entities/user.entity';
 import {
   HASH_PROVIDER,
   IHashProvider,
@@ -19,28 +19,27 @@ import {
   REFRESH_TOKEN_REPOSITORY,
 } from '../../domain/repositories/refresh-token.repository.interface';
 import {
+  IRiotSessionExchangeCodeRepository,
+  RIOT_SESSION_EXCHANGE_CODE_REPOSITORY,
+} from '../../domain/repositories/riot-session-exchange-code.repository.interface';
+import {
   IUserRepository,
   USER_REPOSITORY,
 } from '../../domain/repositories/user.repository.interface';
 
-/** Deterministic placeholder email for Riot `sub` (no DB migration). */
-export function placeholderEmailForRiotSub(riotSub: string): string {
-  const h = createHash('sha256').update(riotSub, 'utf8').digest('hex');
-  return `rso-${h}@accounts.wpgg.local`;
-}
+export type ExchangeRiotSessionCodeInput = { code: string };
 
-export type EstablishRiotOauthSessionInput = { riotSub: string };
-
-export type EstablishRiotOauthSessionOutput = {
-  userId: string;
+export type ExchangeRiotSessionCodeOutput = {
   accessToken: string;
   refreshToken: string;
   rememberMe: boolean;
 };
 
 @Injectable()
-export class EstablishRiotOauthSessionUseCase {
+export class ExchangeRiotSessionCodeUseCase {
   constructor(
+    @Inject(RIOT_SESSION_EXCHANGE_CODE_REPOSITORY)
+    private readonly codes: IRiotSessionExchangeCodeRepository,
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     @Inject(REFRESH_TOKEN_REPOSITORY)
@@ -52,23 +51,27 @@ export class EstablishRiotOauthSessionUseCase {
   ) {}
 
   async execute(
-    input: EstablishRiotOauthSessionInput,
-  ): Promise<EstablishRiotOauthSessionOutput> {
-    const email = placeholderEmailForRiotSub(input.riotSub);
-    let user = await this.userRepository.findByEmail(email);
+    input: ExchangeRiotSessionCodeInput,
+  ): Promise<ExchangeRiotSessionCodeOutput> {
+    const trimmed = input.code?.trim();
+    if (!trimmed) {
+      throw new UnauthorizedException('Invalid or expired session code');
+    }
+    const codeHash = createHash('sha256').update(trimmed, 'utf8').digest('hex');
+    const consumed = await this.codes.consumeActiveByCodeHash(codeHash);
+    if (!consumed) {
+      throw new UnauthorizedException('Invalid or expired session code');
+    }
+
+    const user = await this.userRepository.findById(consumed.userId);
     if (!user) {
-      const passwordHash = await this.hashProvider.hash(randomUUID());
-      const userId = randomUUID();
-      const created = UserEntity.create({
-        id: userId,
-        email,
-        passwordHash,
-      });
-      try {
-        user = await this.userRepository.save(created);
-      } catch {
-        throw new InternalServerErrorException();
-      }
+      throw new UnauthorizedException('Invalid or expired session code');
+    }
+
+    try {
+      await this.refreshTokenRepository.revokeAllForUser(user.id);
+    } catch {
+      throw new InternalServerErrorException();
     }
 
     try {
@@ -99,11 +102,6 @@ export class EstablishRiotOauthSessionUseCase {
       throw new InternalServerErrorException();
     }
 
-    return {
-      userId: user.id,
-      accessToken,
-      refreshToken: rawRefreshToken,
-      rememberMe,
-    };
+    return { accessToken, refreshToken: rawRefreshToken, rememberMe };
   }
 }

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { attachSessionCookies } from '@modules/auth/infrastructure/auth-session-cookies';
+import { CreateRiotSessionExchangeCodeUseCase } from '@modules/auth/application/use-cases/create-riot-session-exchange-code.use-case';
 import { EstablishRiotOauthSessionUseCase } from '@modules/auth/application/use-cases/establish-riot-oauth-session.use-case';
 import type { Response } from 'express';
 import { ExchangeRsoCodeUseCase } from '../application/use-cases/exchange-rso-code.use-case';
@@ -26,7 +27,8 @@ import { RsoUserinfoRequestDto } from './dto/rso-userinfo-request.dto';
  * Configure RIOT_RSO_CLIENT_ID, RIOT_RSO_REDIRECT_URI, and either
  * RIOT_RSO_CLIENT_SECRET or RIOT_RSO_CLIENT_ASSERTION.
  * Optional: RIOT_RSO_SUCCESS_REDIRECT_URL — after login, issues wpgg cookies and redirects
- * there without putting tokens in the URL fragment.
+ * there with `?riot_session=<one-time code>` (plus cookies on the API host). The SPA redeems
+ * the code via `POST /auth/riot-session`. On OAuth error, `?error=` / `?error_description=`; missing Riot subject: `?error=rso_no_subject`.
  */
 @Controller('riot/rso')
 export class RiotRsoController {
@@ -37,6 +39,7 @@ export class RiotRsoController {
     private readonly refreshTokens: RefreshRsoTokensUseCase,
     private readonly getRsoUserinfo: GetRsoUserinfoUseCase,
     private readonly establishWpggSession: EstablishRiotOauthSessionUseCase,
+    private readonly createRiotSessionCode: CreateRiotSessionExchangeCodeUseCase,
   ) {}
 
   /** Minimal HTML index with a Sign In link (tutorial-style). */
@@ -122,7 +125,12 @@ export class RiotRsoController {
       });
       attachSessionCookies(res, this.config, session);
 
+      const { code: riotSession } = await this.createRiotSessionCode.execute({
+        userId: session.userId,
+      });
+
       const target = new URL(successRedirect);
+      target.searchParams.set('riot_session', riotSession);
       res.redirect(HttpStatus.FOUND, target.toString());
       return;
     }

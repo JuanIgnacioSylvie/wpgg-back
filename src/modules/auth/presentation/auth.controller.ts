@@ -18,6 +18,7 @@ import {
   clearSessionCookies,
   REFRESH_TOKEN_COOKIE,
 } from '../infrastructure/auth-session-cookies';
+import { ExchangeRiotSessionCodeUseCase } from '../application/use-cases/exchange-riot-session-code.use-case';
 import { LoginUserUseCase } from '../application/use-cases/login-user.use-case';
 import { LogoutUserUseCase } from '../application/use-cases/logout-user.use-case';
 import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.use-case';
@@ -25,6 +26,7 @@ import { RegisterUserUseCase } from '../application/use-cases/register-user.use-
 import { LoginRequestDto } from './dto/login-request.dto';
 import { RefreshRequestDto } from './dto/refresh-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
+import { RiotSessionExchangeRequestDto } from './dto/riot-session-exchange-request.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -33,6 +35,7 @@ export class AuthController {
     private readonly loginUser: LoginUserUseCase,
     private readonly refreshToken: RefreshTokenUseCase,
     private readonly logoutUser: LogoutUserUseCase,
+    private readonly exchangeRiotSessionCode: ExchangeRiotSessionCodeUseCase,
     private readonly configService: ConfigService,
   ) {}
 
@@ -93,6 +96,26 @@ export class AuthController {
       };
     }
     return { accessToken: out.accessToken };
+  }
+
+  /**
+   * Redeem one-time `riot_session` code from Riot OAuth success redirect.
+   * Returns wpgg tokens and sets session cookies when possible.
+   */
+  @Post('riot-session')
+  @HttpCode(HttpStatus.OK)
+  async riotSession(
+    @Body() body: RiotSessionExchangeRequestDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const out = await this.exchangeRiotSessionCode.execute({
+      code: body.code,
+    });
+    attachSessionCookies(res, this.configService, out);
+    return {
+      accessToken: out.accessToken,
+      refreshToken: out.refreshToken,
+    };
   }
 
   @Post('logout')
