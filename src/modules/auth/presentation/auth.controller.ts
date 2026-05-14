@@ -47,7 +47,7 @@ export class AuthController {
       refreshToken: out.refreshToken,
       rememberMe: false,
     });
-    return { accessToken: out.accessToken };
+    return { accessToken: out.accessToken, refreshToken: out.refreshToken };
   }
 
   @Post('login')
@@ -62,7 +62,7 @@ export class AuthController {
       refreshToken: out.refreshToken,
       rememberMe: out.rememberMe,
     });
-    return { accessToken: out.accessToken };
+    return { accessToken: out.accessToken, refreshToken: out.refreshToken };
   }
 
   @Post('refresh')
