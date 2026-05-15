@@ -19,6 +19,7 @@ export interface SummonerDto {
 
 export interface MatchParticipantDto {
   puuid: string;
+  championId: number;
   championName: string;
   kills: number;
   deaths: number;
@@ -32,6 +33,8 @@ export interface MatchDto {
   gameMode: string;
   gameDuration: number;
   gameCreation: number;
+  /** Milliseconds since epoch; may be omitted by Riot for some queues. */
+  gameEndTimestamp?: number;
   participants: MatchParticipantDto[];
 }
 

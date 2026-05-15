@@ -73,26 +73,12 @@ export class RiotController {
     @CurrentUser() userId: string,
     @Param('matchId') matchId: string,
   ) {
-    const m = await this.matchHistory.executeMatchDetail(userId, matchId);
-    return {
-      matchId: m.matchId,
-      gameMode: m.gameMode,
-      gameDuration: m.gameDuration,
-      gameCreation: m.gameCreation,
-      participants: m.participants,
-    };
+    return this.matchHistory.executeMatchDetail(userId, matchId);
   }
 
   @Get('matches')
   async getMatches(@CurrentUser() userId: string) {
-    const list = await this.matchHistory.execute(userId);
-    return list.map((m) => ({
-      matchId: m.matchId,
-      gameMode: m.gameMode,
-      gameDuration: m.gameDuration,
-      gameCreation: m.gameCreation,
-      participants: m.participants,
-    }));
+    return this.matchHistory.execute(userId);
   }
 
   @Get('ranked')

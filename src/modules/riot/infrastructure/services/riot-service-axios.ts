@@ -202,8 +202,10 @@ export class RiotServiceAxios implements IRiotService {
         gameMode: string;
         gameDuration: number;
         gameCreation: number;
+        gameEndTimestamp?: number;
         participants: Array<{
           puuid: string;
+          championId: number;
           championName: string;
           kills: number;
           deaths: number;
@@ -215,13 +217,17 @@ export class RiotServiceAxios implements IRiotService {
       };
     };
     const info = body.info!;
+    const gameEndTimestamp =
+      info.gameEndTimestamp ?? info.gameCreation + info.gameDuration * 1000;
     return {
       matchId: body.metadata?.matchId ?? matchId,
       gameMode: info.gameMode,
       gameDuration: info.gameDuration,
       gameCreation: info.gameCreation,
-      participants: info.participants.map((p) => ({
+      gameEndTimestamp,
+        participants: info.participants.map((p) => ({
         puuid: p.puuid,
+        championId: p.championId ?? 0,
         championName: p.championName,
         kills: p.kills,
         deaths: p.deaths,
