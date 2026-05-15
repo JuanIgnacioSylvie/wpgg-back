@@ -53,7 +53,8 @@ export class RiotController {
 
   @Get('summoner')
   async getSummoner(@CurrentUser() userId: string) {
-    const s = await this.summonerProfile.execute(userId);
+    const profile = await this.summonerProfile.execute(userId);
+    const s = profile.summoner;
     return {
       puuid: s.puuid,
       summonerId: s.summonerId,
@@ -61,6 +62,9 @@ export class RiotController {
       profileIconId: s.profileIconId,
       summonerLevel: s.summonerLevel,
       revisionDate: s.revisionDate,
+      gameName: profile.gameName,
+      tagLine: profile.tagLine,
+      region: profile.region,
     };
   }
 

@@ -130,6 +130,14 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   RIOT_RSO_SCOPES?: string;
+
+  /**
+   * Platform region (e.g. LA2) used when RSO userinfo omits cpid during auto-link.
+   * Must be one of [ALLOWED_RIOT_REGIONS].
+   */
+  @IsOptional()
+  @IsString()
+  RIOT_DEFAULT_LINK_REGION?: string;
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {

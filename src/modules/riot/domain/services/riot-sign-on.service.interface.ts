@@ -15,6 +15,23 @@ export type RiotRsoUserinfo = {
   cpid?: string;
 };
 
+/** Account-v1 `accounts/me` using the RSO access token (Bearer). */
+export type RiotRsoAccountMe = {
+  puuid: string;
+  gameName: string;
+  tagLine: string;
+};
+
+/** LoL summoner-v4 `summoners/me` on the player's platform (cpid). */
+export type RiotRsoLoLSummonerMe = {
+  puuid: string;
+  summonerId: string;
+  accountId: string;
+  profileIconId: number;
+  summonerLevel: number;
+  revisionDate: number;
+};
+
 export interface IRiotSignOnService {
   exchangeAuthorizationCode(
     code: string,
@@ -27,4 +44,11 @@ export interface IRiotSignOnService {
   ): Promise<RiotRsoTokenResponse>;
 
   getUserinfo(accessToken: string): Promise<RiotRsoUserinfo>;
+
+  getAccountMe(accessToken: string): Promise<RiotRsoAccountMe>;
+
+  getLoLSummonerMe(
+    accessToken: string,
+    platformId: string,
+  ): Promise<RiotRsoLoLSummonerMe>;
 }

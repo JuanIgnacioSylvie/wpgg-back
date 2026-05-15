@@ -18,6 +18,7 @@ import type { Response } from 'express';
 import { ExchangeRsoCodeUseCase } from '../application/use-cases/exchange-rso-code.use-case';
 import { GetRsoAuthorizeUrlUseCase } from '../application/use-cases/get-rso-authorize-url.use-case';
 import { GetRsoUserinfoUseCase } from '../application/use-cases/get-rso-userinfo.use-case';
+import { LinkRiotAccountFromRsoUseCase } from '../application/use-cases/link-riot-account-from-rso.use-case';
 import { RefreshRsoTokensUseCase } from '../application/use-cases/refresh-rso-tokens.use-case';
 import { RsoRefreshRequestDto } from './dto/rso-refresh-request.dto';
 import { RsoSignInQueryDto } from './dto/rso-sign-in-query.dto';
@@ -45,6 +46,7 @@ export class RiotRsoController {
     private readonly getRsoUserinfo: GetRsoUserinfoUseCase,
     private readonly establishWpggSession: EstablishRiotOauthSessionUseCase,
     private readonly createRiotSessionCode: CreateRiotSessionExchangeCodeUseCase,
+    private readonly linkRiotFromRso: LinkRiotAccountFromRsoUseCase,
   ) {}
 
   /** Minimal HTML index with a Sign In link (tutorial-style). */
@@ -128,6 +130,27 @@ export class RiotRsoController {
       const session = await this.establishWpggSession.execute({
         riotSub,
       });
+
+      let rsoCpid: string | undefined;
+      try {
+        const ui = await this.getRsoUserinfo.execute(payload.access_token);
+        rsoCpid = ui.cpid;
+      } catch (err) {
+        this.logger.warn(
+          `RSO userinfo for auto-link failed: ${
+            err instanceof Error ? err.message : err
+          }`,
+        );
+      }
+
+      const linked = await this.linkRiotFromRso.execute({
+        userId: session.userId,
+        accessToken: payload.access_token,
+        cpid: rsoCpid,
+      });
+      if (linked) {
+        this.logger.log(`RSO auto-linked summoner for user ${session.userId}`);
+      }
 
       const target = new URL(successRedirect);
       let riotSessionPlain: string;

@@ -1,5 +1,12 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { SummonerEntity } from '../../domain/entities/summoner.entity';
+
+export type SummonerProfileResult = {
+  summoner: SummonerEntity;
+  gameName: string;
+  tagLine: string;
+  region: string;
+};
 import {
   IRiotAccountRepository,
   RIOT_ACCOUNT_REPOSITORY,
@@ -18,7 +25,7 @@ export class GetSummonerProfileUseCase {
     private readonly riotService: IRiotService,
   ) {}
 
-  async execute(userId: string): Promise<SummonerEntity> {
+  async execute(userId: string): Promise<SummonerProfileResult> {
     const account = await this.riotAccountRepository.findByUserId(userId);
     if (!account) {
       throw new NotFoundException();
@@ -28,13 +35,18 @@ export class GetSummonerProfileUseCase {
       account.puuid,
       account.region,
     );
-    return new SummonerEntity(
-      dto.puuid,
-      dto.summonerId,
-      dto.accountId,
-      dto.profileIconId,
-      dto.summonerLevel,
-      dto.revisionDate,
-    );
+    return {
+      summoner: new SummonerEntity(
+        dto.puuid,
+        dto.summonerId,
+        dto.accountId,
+        dto.profileIconId,
+        dto.summonerLevel,
+        dto.revisionDate,
+      ),
+      gameName: account.gameName,
+      tagLine: account.tagLine,
+      region: account.region,
+    };
   }
 }

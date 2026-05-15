@@ -7,6 +7,7 @@ import { GetRsoUserinfoUseCase } from '../application/use-cases/get-rso-userinfo
 import { GetMatchHistoryUseCase } from '../application/use-cases/get-match-history.use-case';
 import { GetRankedStatsUseCase } from '../application/use-cases/get-ranked-stats.use-case';
 import { GetSummonerProfileUseCase } from '../application/use-cases/get-summoner-profile.use-case';
+import { LinkRiotAccountFromRsoUseCase } from '../application/use-cases/link-riot-account-from-rso.use-case';
 import { LinkRiotAccountUseCase } from '../application/use-cases/link-riot-account.use-case';
 import { RefreshRsoTokensUseCase } from '../application/use-cases/refresh-rso-tokens.use-case';
 import { RIOT_ACCOUNT_REPOSITORY } from '../domain/repositories/riot-account.repository.interface';
@@ -36,6 +37,7 @@ import { RiotRsoController } from './riot-rso.controller';
     RefreshRsoTokensUseCase,
     GetRsoUserinfoUseCase,
     LinkRiotAccountUseCase,
+    LinkRiotAccountFromRsoUseCase,
     GetSummonerProfileUseCase,
     GetMatchHistoryUseCase,
     GetRankedStatsUseCase,
