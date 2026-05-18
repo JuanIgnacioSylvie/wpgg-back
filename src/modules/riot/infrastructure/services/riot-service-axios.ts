@@ -86,6 +86,14 @@ function platformHost(region: string): string {
   return `${region.toLowerCase()}.api.riotgames.com`;
 }
 
+/** Match-v5 `gameDuration` is seconds; older payloads may still use ms. */
+function normalizeGameDuration(raw: number): number {
+  if (raw > 10_000) {
+    return Math.round(raw / 1000);
+  }
+  return raw;
+}
+
 @Injectable()
 export class RiotServiceAxios implements IRiotService {
   private readonly http: AxiosInstance;
@@ -217,12 +225,13 @@ export class RiotServiceAxios implements IRiotService {
       };
     };
     const info = body.info!;
+    const gameDuration = normalizeGameDuration(info.gameDuration);
     const gameEndTimestamp =
-      info.gameEndTimestamp ?? info.gameCreation + info.gameDuration * 1000;
+      info.gameEndTimestamp ?? info.gameCreation + gameDuration * 1000;
     return {
       matchId: body.metadata?.matchId ?? matchId,
       gameMode: info.gameMode,
-      gameDuration: info.gameDuration,
+      gameDuration,
       gameCreation: info.gameCreation,
       gameEndTimestamp,
         participants: info.participants.map((p) => ({

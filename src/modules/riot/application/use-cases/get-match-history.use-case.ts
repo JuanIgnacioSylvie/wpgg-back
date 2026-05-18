@@ -26,27 +26,44 @@ export class GetMatchHistoryUseCase {
     private readonly riotService: IRiotService,
   ) {}
 
-  async execute(userId: string): Promise<MatchSummaryForViewer[]> {
+  async execute(
+    userId: string,
+    limit = 10,
+  ): Promise<MatchSummaryForViewer[]> {
     const account = await this.riotAccountRepository.findByUserId(userId);
     if (!account) {
       throw new ForbiddenException();
     }
 
+    const count = Math.min(Math.max(limit, 1), 20);
     const matchIds = await this.riotService.getMatchHistory(
       account.puuid,
       account.region,
-      20,
+      count,
     );
 
-    const details = await Promise.all(
+    if (matchIds.length === 0) {
+      return [];
+    }
+
+    const settled = await Promise.allSettled(
       matchIds.map((id) =>
         this.riotService.getMatchDetail(id, account.region),
       ),
     );
 
-    return details
-      .map((m) => this.tryViewerSummary(m, account.puuid))
-      .filter((x): x is MatchSummaryForViewer => x != null);
+    const summaries: MatchSummaryForViewer[] = [];
+    for (const result of settled) {
+      if (result.status !== 'fulfilled') {
+        continue;
+      }
+      const summary = this.tryViewerSummary(result.value, account.puuid);
+      if (summary != null) {
+        summaries.push(summary);
+      }
+    }
+
+    return summaries;
   }
 
   async executeMatchDetail(
@@ -72,7 +89,10 @@ export class GetMatchHistoryUseCase {
     m: MatchDto,
     viewerPuuid: string,
   ): MatchSummaryForViewer | null {
-    const me = m.participants.find((p) => p.puuid === viewerPuuid);
+    const viewer = viewerPuuid.trim().toLowerCase();
+    const me = m.participants.find(
+      (p) => (p.puuid ?? '').trim().toLowerCase() === viewer,
+    );
     if (!me) {
       return null;
     }

@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Body,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from '@shared/infrastructure/decorators/current-user.decorator';
@@ -77,8 +78,13 @@ export class RiotController {
   }
 
   @Get('matches')
-  async getMatches(@CurrentUser() userId: string) {
-    return this.matchHistory.execute(userId);
+  async getMatches(
+    @CurrentUser() userId: string,
+    @Query('limit') limit?: string,
+  ) {
+    const parsed = limit != null ? Number.parseInt(limit, 10) : 10;
+    const safeLimit = Number.isFinite(parsed) ? parsed : 10;
+    return this.matchHistory.execute(userId, safeLimit);
   }
 
   @Get('ranked')
