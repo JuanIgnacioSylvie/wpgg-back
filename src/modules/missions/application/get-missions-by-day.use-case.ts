@@ -6,7 +6,10 @@ import {
   PrismaMissionsRepository,
 } from '../infrastructure/persistence/prisma-missions.repository';
 import { UserMissionContextService } from './user-mission-context.service';
-import { calendarDateInTimezone } from '../domain/mission-timezone.util';
+import {
+  missionCalendarDateString,
+  WPGG_MISSION_TIMEZONE,
+} from '../domain/mission-timezone.util';
 
 @Injectable()
 export class GetMissionsByDayUseCase {
@@ -18,10 +21,9 @@ export class GetMissionsByDayUseCase {
 
   async execute(userId: string, dateParam?: string) {
     await this.context.requireRiotAccount(userId);
-    const tz = await this.context.resolveTimezone(userId);
     const calendarDate = dateParam
       ? this.context.parseCalendarDateParam(dateParam)
-      : this.context.todayCalendarDate(tz);
+      : this.context.todayCalendarDate();
 
     const day = await this.repo.getOrCreateMissionDay(userId, calendarDate);
     await this.offerGen.ensureDailyOffers(day.id);
@@ -39,10 +41,11 @@ export class GetMissionsByDayUseCase {
         return mapUserMission(m, offer);
       });
 
-    const todayStr = calendarDateInTimezone(new Date(), tz);
+    const todayStr = missionCalendarDateString();
     const dateStr = dateParam ?? todayStr;
 
     return {
+      missionDayTimezone: WPGG_MISSION_TIMEZONE,
       date: dateStr,
       missions,
       isToday: dateStr === todayStr,

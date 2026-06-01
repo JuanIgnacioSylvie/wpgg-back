@@ -3,6 +3,8 @@ import { Prisma, UserMissionStatus } from '@prisma/client';
 import {
   IRiotService,
   isMissionEligibleMatch,
+  MatchDto,
+  MatchParticipantDto,
   RIOT_SERVICE,
 } from '@modules/riot/domain/services/riot.service.interface';
 import {
@@ -12,11 +14,16 @@ import {
   MissionTemplateTarget,
   progressPercentFromState,
 } from '../domain/mission-rule.engine';
+import { isMatchOnMissionDay } from '../domain/mission-timezone.util';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
 import { UserMissionContextService } from './user-mission-context.service';
 
 const SYNC_MATCH_COUNT = 30;
+
+type ActiveMission = Awaited<
+  ReturnType<PrismaMissionsRepository['findActiveMissionsForUser']>
+>[number];
 
 @Injectable()
 export class SyncUserMatchesUseCase {
@@ -47,14 +54,14 @@ export class SyncUserMatchesUseCase {
       SYNC_MATCH_COUNT,
     );
 
+    const eligibleMatches: Array<{
+      match: MatchDto;
+      me: MatchParticipantDto;
+    }> = [];
+
     let processed = 0;
     for (const matchId of matchIds) {
-      const seen = await this.repo.isMatchProcessed(userId, matchId);
-      if (seen) {
-        continue;
-      }
-
-      let match;
+      let match: MatchDto;
       try {
         match = await this.riotService.getMatchDetail(matchId, account.region);
       } catch (e) {
@@ -62,8 +69,11 @@ export class SyncUserMatchesUseCase {
         continue;
       }
 
-      await this.repo.markMatchProcessed(userId, matchId);
-      processed++;
+      const seen = await this.repo.isMatchProcessed(userId, matchId);
+      if (!seen) {
+        await this.repo.markMatchProcessed(userId, matchId);
+        processed++;
+      }
 
       if (!isMissionEligibleMatch(match)) {
         continue;
@@ -76,47 +86,64 @@ export class SyncUserMatchesUseCase {
         continue;
       }
 
-      for (const mission of active) {
-        if (mission.status !== UserMissionStatus.ACTIVE) {
-          continue;
-        }
-        const target = mission.template
-          .targetJson as MissionTemplateTarget;
-        const progress =
-          (mission.progressJson as Record<string, unknown>) ??
-          initialProgress(mission.template.ruleType);
+      eligibleMatches.push({ match, me });
+    }
 
-        const ctx = {
-          ruleType: mission.template.ruleType,
-          target,
-          championId: mission.offer?.championId ?? null,
-        };
-
-        const updated = applyMatchToProgress(ctx, progress, me, match);
-        const percent = progressPercentFromState(ctx, updated);
-        let status: UserMissionStatus = UserMissionStatus.ACTIVE;
-        if (isMissionComplete(ctx, updated)) {
-          status = UserMissionStatus.COMPLETED;
-          await this.walletRepo.creditMissionReward(
-            userId,
-            mission.template.rewardWpgg,
-            `mission:${mission.id}`,
-            `Mission completed: ${mission.template.titleEn}`,
-          );
-        }
-
-        await this.repo.updateUserMissionProgress(
-          mission.id,
-          percent,
-          updated as Prisma.InputJsonValue,
-          status,
-        );
-
-        mission.progressPercent = percent;
-        mission.status = status;
-      }
+    for (const mission of active) {
+      await this.recomputeMissionProgress(
+        mission,
+        eligibleMatches,
+        userId,
+      );
     }
 
     return { processed };
+  }
+
+  /** Rebuild progress from recent history, counting only matches on the mission day. */
+  private async recomputeMissionProgress(
+    mission: ActiveMission,
+    eligibleMatches: Array<{ match: MatchDto; me: MatchParticipantDto }>,
+    userId: string,
+  ): Promise<void> {
+    if (mission.status !== UserMissionStatus.ACTIVE) {
+      return;
+    }
+
+    const target = mission.template.targetJson as MissionTemplateTarget;
+    const ctx = {
+      ruleType: mission.template.ruleType,
+      target,
+      championId: mission.offer?.championId ?? null,
+    };
+
+    let progress = initialProgress(mission.template.ruleType);
+    const missionDay = mission.missionDay.calendarDate;
+
+    for (const { match, me } of eligibleMatches) {
+      if (!isMatchOnMissionDay(match, missionDay)) {
+        continue;
+      }
+      progress = applyMatchToProgress(ctx, progress, me, match);
+    }
+
+    const percent = progressPercentFromState(ctx, progress);
+    let status: UserMissionStatus = UserMissionStatus.ACTIVE;
+    if (isMissionComplete(ctx, progress)) {
+      status = UserMissionStatus.COMPLETED;
+      await this.walletRepo.creditMissionReward(
+        userId,
+        mission.template.rewardWpgg,
+        `mission:${mission.id}`,
+        `Mission completed: ${mission.template.titleEn}`,
+      );
+    }
+
+    await this.repo.updateUserMissionProgress(
+      mission.id,
+      percent,
+      progress as Prisma.InputJsonValue,
+      status,
+    );
   }
 }

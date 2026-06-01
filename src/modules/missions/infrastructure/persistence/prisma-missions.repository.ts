@@ -241,13 +241,6 @@ export class PrismaMissionsRepository {
     });
   }
 
-  findUserTimezone(userId: string) {
-    return this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { timezone: true },
-    });
-  }
-
   findRiotAccount(userId: string) {
     return this.prisma.riotAccount.findUnique({ where: { userId } });
   }

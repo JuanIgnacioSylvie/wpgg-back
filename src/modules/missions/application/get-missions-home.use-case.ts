@@ -11,7 +11,11 @@ import {
 } from '../infrastructure/persistence/prisma-missions.repository';
 import { SyncUserMatchesUseCase } from './sync-user-matches.use-case';
 import { UserMissionContextService } from './user-mission-context.service';
-import { msUntilEndOfDay } from '../domain/mission-timezone.util';
+import {
+  missionCalendarDateString,
+  msUntilEndOfMissionDay,
+  WPGG_MISSION_TIMEZONE,
+} from '../domain/mission-timezone.util';
 
 @Injectable()
 export class GetMissionsHomeUseCase {
@@ -24,8 +28,7 @@ export class GetMissionsHomeUseCase {
 
   async execute(userId: string) {
     await this.context.requireRiotAccount(userId);
-    const tz = await this.context.resolveTimezone(userId);
-    const today = this.context.todayCalendarDate(tz);
+    const today = this.context.todayCalendarDate();
 
     const day = await this.repo.getOrCreateMissionDay(userId, today);
     await this.offerGen.ensureDailyOffers(day.id);
@@ -49,9 +52,11 @@ export class GetMissionsHomeUseCase {
     const past = await this.repo.findPastMissions(userId, 30);
     const pastCards = past.map((m) => mapUserMission(m));
 
-    const endsInMs = msUntilEndOfDay(new Date(), tz);
+    const endsInMs = msUntilEndOfMissionDay();
 
     return {
+      missionDayTimezone: WPGG_MISSION_TIMEZONE,
+      missionDate: missionCalendarDateString(),
       primary: primary
         ? { ...primary, endsAt: new Date(Date.now() + endsInMs).toISOString() }
         : null,

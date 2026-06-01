@@ -4,6 +4,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
+import { todayMissionCalendarDate } from '../domain/mission-timezone.util';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 
 @Injectable()
@@ -25,7 +26,8 @@ export class MissionExpiryScheduler implements OnModuleInit, OnModuleDestroy {
   }
 
   private async tick() {
-    const yesterday = new Date();
+    const today = todayMissionCalendarDate();
+    const yesterday = new Date(today);
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
     const result = await this.repo.expireActiveMissionsBeforeDate(yesterday);
     if (result.count > 0) {
