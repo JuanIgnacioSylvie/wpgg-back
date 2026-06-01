@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '@modules/auth/presentation/auth.module';
 import { RiotModule } from '@modules/riot/presentation/riot.module';
 import { SharedModule } from '@shared/shared.module';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
@@ -16,7 +17,7 @@ import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-m
 import { MissionsController } from './missions.controller';
 
 @Module({
-  imports: [SharedModule, RiotModule],
+  imports: [SharedModule, AuthModule, RiotModule],
   controllers: [MissionsController],
   providers: [
     PrismaMissionsRepository,
