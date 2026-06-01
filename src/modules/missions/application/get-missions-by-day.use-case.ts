@@ -27,7 +27,7 @@ export class GetMissionsByDayUseCase {
     await this.offerGen.ensureDailyOffers(day.id);
 
     const refreshed: MissionDayWithRelations | null =
-      await this.repo.findMissionDay(userId, calendarDate);
+      await this.repo.findMissionDay(userId, day.calendarDate);
     if (!refreshed) {
       return { date: dateParam ?? '', missions: [], isToday: false };
     }

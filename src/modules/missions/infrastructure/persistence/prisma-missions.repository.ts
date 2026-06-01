@@ -16,6 +16,12 @@ export type MissionDayWithRelations = Prisma.MissionDayGetPayload<{
   };
 }>;
 
+/** Normalizes calendar dates so Prisma @db.Date lookups stay consistent. */
+export function normalizeCalendarDate(calendarDate: Date): Date {
+  const iso = calendarDate.toISOString().slice(0, 10);
+  return new Date(`${iso}T12:00:00.000Z`);
+}
+
 @Injectable()
 export class PrismaMissionsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -31,10 +37,15 @@ export class PrismaMissionsRepository {
     return this.prisma.missionTemplate.findUnique({ where: { id } });
   }
 
+  countMissionTemplates() {
+    return this.prisma.missionTemplate.count();
+  }
+
   async getOrCreateMissionDay(userId: string, calendarDate: Date) {
+    const day = normalizeCalendarDate(calendarDate);
     const existing = await this.prisma.missionDay.findUnique({
       where: {
-        userId_calendarDate: { userId, calendarDate },
+        userId_calendarDate: { userId, calendarDate: day },
       },
       include: {
         offers: { include: { template: true, userMission: true } },
@@ -45,7 +56,7 @@ export class PrismaMissionsRepository {
       return existing;
     }
     return this.prisma.missionDay.create({
-      data: { userId, calendarDate },
+      data: { userId, calendarDate: day },
       include: {
         offers: { include: { template: true, userMission: true } },
         userMissions: { include: { template: true } },
@@ -54,8 +65,9 @@ export class PrismaMissionsRepository {
   }
 
   findMissionDay(userId: string, calendarDate: Date) {
+    const day = normalizeCalendarDate(calendarDate);
     return this.prisma.missionDay.findUnique({
-      where: { userId_calendarDate: { userId, calendarDate } },
+      where: { userId_calendarDate: { userId, calendarDate: day } },
       include: {
         offers: { include: { template: true, userMission: true } },
         userMissions: { include: { template: true } },

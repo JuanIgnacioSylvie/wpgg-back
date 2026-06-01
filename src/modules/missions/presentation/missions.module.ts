@@ -9,6 +9,7 @@ import { GetMissionsHomeUseCase } from '../application/get-missions-home.use-cas
 import { GetPickTodayUseCase } from '../application/get-pick-today.use-case';
 import { MissionExpiryScheduler } from '../application/mission-expiry.scheduler';
 import { MissionOfferGeneratorService } from '../application/mission-offer-generator.service';
+import { MissionTemplateBootstrapService } from '../infrastructure/mission-template-bootstrap.service';
 import { MissionSyncScheduler } from '../application/mission-sync.scheduler';
 import { RerollMissionOfferUseCase } from '../application/reroll-mission-offer.use-case';
 import { SyncUserMatchesUseCase } from '../application/sync-user-matches.use-case';
@@ -32,6 +33,7 @@ import { MissionsController } from './missions.controller';
     RerollMissionOfferUseCase,
     MissionSyncScheduler,
     MissionExpiryScheduler,
+    MissionTemplateBootstrapService,
   ],
 })
 export class MissionsModule {}

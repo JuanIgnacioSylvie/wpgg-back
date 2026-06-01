@@ -25,7 +25,7 @@ export class GetPickTodayUseCase {
     await this.offerGen.ensureDailyOffers(day.id);
 
     const refreshed: MissionDayWithRelations | null =
-      await this.repo.findMissionDay(userId, today);
+      await this.repo.findMissionDay(userId, day.calendarDate);
     const acceptedOfferIds = new Set(
       (refreshed?.userMissions ?? [])
         .filter((m) => m.offerId)

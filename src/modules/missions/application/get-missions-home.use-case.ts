@@ -33,7 +33,7 @@ export class GetMissionsHomeUseCase {
     await this.sync.execute(userId);
 
     const refreshed: MissionDayWithRelations | null =
-      await this.repo.findMissionDay(userId, today);
+      await this.repo.findMissionDay(userId, day.calendarDate);
     const activeMissions =
       refreshed?.userMissions.filter((m) => m.status === 'ACTIVE') ?? [];
     const activeCards = activeMissions.map((m) => {

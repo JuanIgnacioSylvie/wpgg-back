@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   MissionDifficulty,
   MissionRuleType,
@@ -11,13 +11,25 @@ const RANDOM_CHAMPION_IDS = [
   201, 233, 21, 122, 67, 68, 69, 13, 14, 15, 16, 17, 18, 19, 20,
 ];
 
+const DAILY_OFFER_COUNT = 6;
+
 @Injectable()
 export class MissionOfferGeneratorService {
+  private readonly logger = new Logger(MissionOfferGeneratorService.name);
+
   constructor(private readonly repo: PrismaMissionsRepository) {}
 
   async ensureDailyOffers(missionDayId: string) {
     const existing = await this.repo.countOffers(missionDayId);
-    if (existing > 0) {
+    if (existing >= DAILY_OFFER_COUNT) {
+      return;
+    }
+
+    const templateCount = await this.repo.countMissionTemplates();
+    if (templateCount === 0) {
+      this.logger.warn(
+        'No mission templates in DB; daily offers cannot be generated',
+      );
       return;
     }
 
