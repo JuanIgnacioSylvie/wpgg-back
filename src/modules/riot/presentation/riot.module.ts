@@ -25,6 +25,7 @@ import { RiotRsoController } from './riot-rso.controller';
 
 @Module({
   imports: [SharedModule, AuthModule],
+  exports: [RIOT_SERVICE, RIOT_ACCOUNT_REPOSITORY],
   controllers: [RiotController, RiotRsoController],
   providers: [
     { provide: RIOT_ACCOUNT_REPOSITORY, useClass: PrismaRiotAccountRepository },

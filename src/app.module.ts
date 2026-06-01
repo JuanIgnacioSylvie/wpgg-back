@@ -7,6 +7,8 @@ import { isRelaxFromConfig } from './config/relax-env';
 import { AuthModule } from './modules/auth/presentation/auth.module';
 import { RiotModule } from './modules/riot/presentation/riot.module';
 import { DdragonModule } from './modules/ddragon/presentation/ddragon.module';
+import { MissionsModule } from './modules/missions/presentation/missions.module';
+import { WalletModule } from './modules/wallet/presentation/wallet.module';
 import { SharedModule } from './shared/shared.module';
 
 @Module({
@@ -19,6 +21,8 @@ import { SharedModule } from './shared/shared.module';
     AuthModule,
     RiotModule,
     DdragonModule,
+    WalletModule,
+    MissionsModule,
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

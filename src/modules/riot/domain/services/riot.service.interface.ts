@@ -26,11 +26,23 @@ export interface MatchParticipantDto {
   assists: number;
   win: boolean;
   totalDamageDealt: number;
+  teamPosition: string;
+  totalMinionsKilled: number;
+  neutralMinionsKilled: number;
+  visionScore: number;
+  wardsKilled: number;
+  killParticipation: number;
+  totalDamageDealtToChampions: number;
+  totalHeal: number;
+  totalHealsOnTeammates: number;
+  totalDamageTaken: number;
+  pentaKills: number;
 }
 
 export interface MatchDto {
   matchId: string;
   gameMode: string;
+  queueId: number;
   gameDuration: number;
   gameCreation: number;
   /** Milliseconds since epoch; may be omitted by Riot for some queues. */
@@ -59,4 +71,13 @@ export interface IRiotService {
   getMatchDetail(matchId: string, region: string): Promise<MatchDto>;
   /** @param puuid Encrypted PUUID (same as account-v1 / match-v5). */
   getRankedStats(puuid: string, region: string): Promise<RankedEntryDto[]>;
+}
+
+/** Summoner's Rift ranked / draft queues eligible for daily missions. */
+export const MISSION_ELIGIBLE_QUEUE_IDS = new Set([400, 420, 440]);
+
+export function isMissionEligibleMatch(m: MatchDto): boolean {
+  return (
+    m.gameMode === 'CLASSIC' && MISSION_ELIGIBLE_QUEUE_IDS.has(m.queueId)
+  );
 }

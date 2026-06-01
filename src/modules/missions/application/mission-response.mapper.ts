@@ -1,0 +1,83 @@
+import {
+  MissionDifficulty,
+  MissionOffer,
+  MissionTemplate,
+  UserMission,
+  UserMissionStatus,
+} from '@prisma/client';
+
+export interface MissionCardDto {
+  id: string;
+  offerId?: string;
+  difficulty: MissionDifficulty;
+  titleEs: string;
+  titleEn: string;
+  rewardWpgg: number;
+  status: UserMissionStatus;
+  progressPercent: number;
+  championId?: number | null;
+  endsAt?: string;
+}
+
+function difficultyRank(d: MissionDifficulty): number {
+  if (d === 'HARD') {
+    return 3;
+  }
+  if (d === 'MEDIUM') {
+    return 2;
+  }
+  return 1;
+}
+
+export function mapUserMission(
+  um: UserMission & { template: MissionTemplate },
+  offer?: MissionOffer | null,
+): MissionCardDto {
+  return {
+    id: um.id,
+    offerId: um.offerId ?? offer?.id,
+    difficulty: um.template.difficulty,
+    titleEs: um.template.titleEs,
+    titleEn: um.template.titleEn,
+    rewardWpgg: um.template.rewardWpgg,
+    status: um.status,
+    progressPercent: um.progressPercent,
+    championId: offer?.championId ?? null,
+  };
+}
+
+export function mapOffer(
+  offer: MissionOffer & { template: MissionTemplate },
+  accepted: boolean,
+): MissionCardDto {
+  return {
+    id: offer.id,
+    offerId: offer.id,
+    difficulty: offer.template.difficulty,
+    titleEs: offer.template.titleEs,
+    titleEn: offer.template.titleEn,
+    rewardWpgg: offer.template.rewardWpgg,
+    status: accepted ? 'ACTIVE' : 'OFFER',
+    progressPercent: 0,
+    championId: offer.championId,
+  };
+}
+
+export function pickPrimaryMission(
+  active: MissionCardDto[],
+): MissionCardDto | null {
+  if (active.length === 0) {
+    return null;
+  }
+  const sorted = [...active].sort(
+    (a, b) => difficultyRank(b.difficulty) - difficultyRank(a.difficulty),
+  );
+  return sorted[0];
+}
+
+export function pickSecondaryMissions(
+  active: MissionCardDto[],
+  primary: MissionCardDto | null,
+): MissionCardDto[] {
+  return active.filter((m) => m.id !== primary?.id);
+}

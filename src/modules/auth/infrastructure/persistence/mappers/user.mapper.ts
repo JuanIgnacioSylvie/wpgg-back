@@ -17,6 +17,7 @@ export class UserMapper {
       id: entity.id,
       email: entity.email,
       passwordHash: entity.passwordHash,
+      timezone: null,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     };

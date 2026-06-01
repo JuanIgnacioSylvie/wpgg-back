@@ -208,6 +208,7 @@ export class RiotServiceAxios implements IRiotService {
       metadata?: { matchId?: string };
       info?: {
         gameMode: string;
+        queueId: number;
         gameDuration: number;
         gameCreation: number;
         gameEndTimestamp?: number;
@@ -219,8 +220,18 @@ export class RiotServiceAxios implements IRiotService {
           deaths: number;
           assists: number;
           win: boolean;
+          teamPosition?: string;
+          totalMinionsKilled?: number;
+          neutralMinionsKilled?: number;
+          visionScore?: number;
+          wardsKilled?: number;
           totalDamageDealtToChampions?: number;
           totalDamageDealt?: number;
+          totalHeal?: number;
+          totalHealsOnTeammates?: number;
+          totalDamageTaken?: number;
+          pentaKills?: number;
+          challenges?: { killParticipation?: number };
         }>;
       };
     };
@@ -231,10 +242,11 @@ export class RiotServiceAxios implements IRiotService {
     return {
       matchId: body.metadata?.matchId ?? matchId,
       gameMode: info.gameMode,
+      queueId: info.queueId ?? 0,
       gameDuration,
       gameCreation: info.gameCreation,
       gameEndTimestamp,
-        participants: info.participants.map((p) => ({
+      participants: info.participants.map((p) => ({
         puuid: p.puuid,
         championId: p.championId ?? 0,
         championName: p.championName,
@@ -242,8 +254,20 @@ export class RiotServiceAxios implements IRiotService {
         deaths: p.deaths,
         assists: p.assists,
         win: p.win,
+        teamPosition: p.teamPosition ?? 'NONE',
+        totalMinionsKilled: p.totalMinionsKilled ?? 0,
+        neutralMinionsKilled: p.neutralMinionsKilled ?? 0,
+        visionScore: p.visionScore ?? 0,
+        wardsKilled: p.wardsKilled ?? 0,
+        killParticipation: p.challenges?.killParticipation ?? 0,
+        totalDamageDealtToChampions:
+          p.totalDamageDealtToChampions ?? p.totalDamageDealt ?? 0,
         totalDamageDealt:
           p.totalDamageDealtToChampions ?? p.totalDamageDealt ?? 0,
+        totalHeal: p.totalHeal ?? 0,
+        totalHealsOnTeammates: p.totalHealsOnTeammates ?? 0,
+        totalDamageTaken: p.totalDamageTaken ?? 0,
+        pentaKills: p.pentaKills ?? 0,
       })),
     };
   }
