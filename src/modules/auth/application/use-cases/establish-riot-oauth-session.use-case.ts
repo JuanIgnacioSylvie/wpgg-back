@@ -4,6 +4,8 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
+import type { RsoIntent } from '@modules/riot/domain/rso-intent';
+import { RSO_INTENT_ERROR } from '@modules/riot/domain/rso-intent';
 import { RefreshTokenEntity } from '../../domain/entities/refresh-token.entity';
 import { UserEntity } from '../../domain/entities/user.entity';
 import {
@@ -29,14 +31,31 @@ export function placeholderEmailForRiotSub(riotSub: string): string {
   return `rso-${h}@accounts.wpgg.local`;
 }
 
-export type EstablishRiotOauthSessionInput = { riotSub: string };
+export type EstablishRiotOauthSessionInput = {
+  riotSub: string;
+  intent: RsoIntent;
+};
 
-export type EstablishRiotOauthSessionOutput = {
+export type EstablishRiotOauthSessionSuccess = {
   userId: string;
   accessToken: string;
   refreshToken: string;
   rememberMe: boolean;
 };
+
+export type EstablishRiotOauthSessionError = {
+  error: (typeof RSO_INTENT_ERROR)[keyof typeof RSO_INTENT_ERROR];
+};
+
+export type EstablishRiotOauthSessionResult =
+  | EstablishRiotOauthSessionSuccess
+  | EstablishRiotOauthSessionError;
+
+export function isEstablishRiotOauthSessionError(
+  result: EstablishRiotOauthSessionResult,
+): result is EstablishRiotOauthSessionError {
+  return 'error' in result;
+}
 
 @Injectable()
 export class EstablishRiotOauthSessionUseCase {
@@ -53,9 +72,19 @@ export class EstablishRiotOauthSessionUseCase {
 
   async execute(
     input: EstablishRiotOauthSessionInput,
-  ): Promise<EstablishRiotOauthSessionOutput> {
+  ): Promise<EstablishRiotOauthSessionResult> {
     const email = placeholderEmailForRiotSub(input.riotSub);
-    let user = await this.userRepository.findByEmail(email);
+    const existingUser = await this.userRepository.findByEmail(email);
+
+    if (input.intent === 'login' && !existingUser) {
+      return { error: RSO_INTENT_ERROR.USER_NOT_FOUND };
+    }
+
+    if (input.intent === 'register' && existingUser) {
+      return { error: RSO_INTENT_ERROR.USER_ALREADY_EXISTS };
+    }
+
+    let user = existingUser;
     if (!user) {
       const passwordHash = await this.hashProvider.hash(randomUUID());
       const userId = randomUUID();

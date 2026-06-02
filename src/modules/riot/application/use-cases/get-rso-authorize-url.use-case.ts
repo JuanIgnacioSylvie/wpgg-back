@@ -1,5 +1,6 @@
 import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { RsoIntent } from '../../domain/rso-intent';
 import {
   IRsoStateSigner,
   RSO_STATE_SIGNER,
@@ -10,6 +11,7 @@ const AUTHORIZE_URL = 'https://auth.riotgames.com/authorize';
 export type GetRsoAuthorizeUrlInput = {
   loginHint?: string;
   uiLocales?: string;
+  intent?: RsoIntent;
 };
 
 @Injectable()
@@ -30,7 +32,7 @@ export class GetRsoAuthorizeUrlUseCase {
     const scopesRaw =
       this.config.get<string>('RIOT_RSO_SCOPES')?.trim() ||
       'openid offline_access cpid';
-    const state = this.stateSigner.create();
+    const state = this.stateSigner.create(input.intent ?? 'login');
 
     const params = new URLSearchParams({
       redirect_uri: redirectUri,

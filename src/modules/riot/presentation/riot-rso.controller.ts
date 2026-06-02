@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Inject,
   Logger,
   Post,
   Body,
@@ -15,6 +16,13 @@ import { attachSessionCookies } from '@modules/auth/infrastructure/auth-session-
 import { CreateRiotSessionExchangeCodeUseCase } from '@modules/auth/application/use-cases/create-riot-session-exchange-code.use-case';
 import { EstablishRiotOauthSessionUseCase } from '@modules/auth/application/use-cases/establish-riot-oauth-session.use-case';
 import type { Response } from 'express';
+import {
+  isEstablishRiotOauthSessionError,
+} from '@modules/auth/application/use-cases/establish-riot-oauth-session.use-case';
+import {
+  IRsoStateSigner,
+  RSO_STATE_SIGNER,
+} from '../domain/services/rso-state-signer.interface';
 import { ExchangeRsoCodeUseCase } from '../application/use-cases/exchange-rso-code.use-case';
 import { GetRsoAuthorizeUrlUseCase } from '../application/use-cases/get-rso-authorize-url.use-case';
 import { GetRsoUserinfoUseCase } from '../application/use-cases/get-rso-userinfo.use-case';
@@ -33,6 +41,7 @@ import { RsoUserinfoRequestDto } from './dto/rso-userinfo-request.dto';
  * the code via `POST /auth/riot-session`. If the code cannot be stored, redirects with
  * `?error=riot_session_unavailable` (no session cookies). On OAuth error, `?error=` /
  * `?error_description=`; missing Riot subject: `?error=rso_no_subject`.
+ * Intent mismatch: `?error=user_not_found&intent=login` or `?error=user_already_exists&intent=register`.
  */
 @Controller('riot/rso')
 export class RiotRsoController {
@@ -47,15 +56,22 @@ export class RiotRsoController {
     private readonly establishWpggSession: EstablishRiotOauthSessionUseCase,
     private readonly createRiotSessionCode: CreateRiotSessionExchangeCodeUseCase,
     private readonly linkRiotFromRso: LinkRiotAccountFromRsoUseCase,
+    @Inject(RSO_STATE_SIGNER) private readonly stateSigner: IRsoStateSigner,
   ) {}
 
-  /** Minimal HTML index with a Sign In link (tutorial-style). */
+  /** Minimal HTML index with Sign In / Sign Up links (tutorial-style). */
   @Get()
   index(@Res() res: Response) {
-    const { authorizeUrl } = this.getAuthorizeUrl.execute({});
-    const href = authorizeUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+    const signIn = this.getAuthorizeUrl.execute({ intent: 'login' });
+    const signUp = this.getAuthorizeUrl.execute({ intent: 'register' });
+    const signInHref = signIn.authorizeUrl
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;');
+    const signUpHref = signUp.authorizeUrl
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;');
     res.type('html').send(
-      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Riot Sign On</title></head><body><p><a href="${href}">Sign In with Riot</a></p></body></html>`,
+      `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Riot Sign On</title></head><body><p><a href="${signInHref}">Sign In with Riot</a></p><p><a href="${signUpHref}">Sign Up with Riot</a></p></body></html>`,
     );
   }
 
@@ -67,6 +83,23 @@ export class RiotRsoController {
     const { authorizeUrl, state } = this.getAuthorizeUrl.execute({
       loginHint: query.loginHint,
       uiLocales: query.uiLocales,
+      intent: 'login',
+    });
+    if (query.redirect === 'true' || query.redirect === '1') {
+      return res.redirect(authorizeUrl);
+    }
+    return { authorizeUrl, state };
+  }
+
+  @Get('sign-up')
+  signUp(
+    @Query() query: RsoSignInQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { authorizeUrl, state } = this.getAuthorizeUrl.execute({
+      loginHint: query.loginHint,
+      uiLocales: query.uiLocales,
+      intent: 'register',
     });
     if (query.redirect === 'true' || query.redirect === '1') {
       return res.redirect(authorizeUrl);
@@ -104,6 +137,9 @@ export class RiotRsoController {
     if (!code?.trim() || !state?.trim()) {
       throw new BadRequestException('Missing code or state');
     }
+    const parsedState = this.stateSigner.parse(state);
+    const oauthIntent = parsedState?.intent ?? 'login';
+
     const payload = await this.exchangeCode.execute({
       code,
       state,
@@ -127,9 +163,20 @@ export class RiotRsoController {
         }
       }
 
-      const session = await this.establishWpggSession.execute({
+      const sessionResult = await this.establishWpggSession.execute({
         riotSub,
+        intent: oauthIntent,
       });
+
+      if (isEstablishRiotOauthSessionError(sessionResult)) {
+        const target = new URL(successRedirect);
+        target.searchParams.set('error', sessionResult.error);
+        target.searchParams.set('intent', oauthIntent);
+        res.redirect(HttpStatus.FOUND, target.toString());
+        return;
+      }
+
+      const session = sessionResult;
 
       let rsoCpid: string | undefined;
       try {
