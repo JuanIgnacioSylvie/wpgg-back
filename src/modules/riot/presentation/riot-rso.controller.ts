@@ -10,7 +10,11 @@ import {
   Body,
   Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
+import { CurrentUser } from '@shared/infrastructure/decorators/current-user.decorator';
+import { JwtAuthGuard } from '@shared/infrastructure/guards/jwt-auth.guard';
+import { CreateRiotPendingLinkCodeUseCase } from '@modules/auth/application/use-cases/create-riot-pending-link-code.use-case';
 import { ConfigService } from '@nestjs/config';
 import { attachSessionCookies } from '@modules/auth/infrastructure/auth-session-cookies';
 import { CreateRiotSessionExchangeCodeUseCase } from '@modules/auth/application/use-cases/create-riot-session-exchange-code.use-case';
@@ -56,6 +60,7 @@ export class RiotRsoController {
     private readonly establishWpggSession: EstablishRiotOauthSessionUseCase,
     private readonly createRiotSessionCode: CreateRiotSessionExchangeCodeUseCase,
     private readonly linkRiotFromRso: LinkRiotAccountFromRsoUseCase,
+    private readonly createRiotPendingLinkCode: CreateRiotPendingLinkCodeUseCase,
     @Inject(RSO_STATE_SIGNER) private readonly stateSigner: IRsoStateSigner,
   ) {}
 
@@ -84,6 +89,26 @@ export class RiotRsoController {
       loginHint: query.loginHint,
       uiLocales: query.uiLocales,
       intent: 'login',
+    });
+    if (query.redirect === 'true' || query.redirect === '1') {
+      return res.redirect(authorizeUrl);
+    }
+    return { authorizeUrl, state };
+  }
+
+  /** Link Riot to an existing WPGG user (JWT required; returns authorize URL). */
+  @Get('link')
+  @UseGuards(JwtAuthGuard)
+  linkAccount(
+    @CurrentUser() userId: string,
+    @Query() query: RsoSignInQueryDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { authorizeUrl, state } = this.getAuthorizeUrl.execute({
+      loginHint: query.loginHint,
+      uiLocales: query.uiLocales,
+      intent: 'link',
+      wpggUserId: userId,
     });
     if (query.redirect === 'true' || query.redirect === '1') {
       return res.redirect(authorizeUrl);
@@ -163,21 +188,6 @@ export class RiotRsoController {
         }
       }
 
-      const sessionResult = await this.establishWpggSession.execute({
-        riotSub,
-        intent: oauthIntent,
-      });
-
-      if (isEstablishRiotOauthSessionError(sessionResult)) {
-        const target = new URL(successRedirect);
-        target.searchParams.set('error', sessionResult.error);
-        target.searchParams.set('intent', oauthIntent);
-        res.redirect(HttpStatus.FOUND, target.toString());
-        return;
-      }
-
-      const session = sessionResult;
-
       let rsoCpid: string | undefined;
       try {
         const ui = await this.getRsoUserinfo.execute(payload.access_token);
@@ -188,6 +198,58 @@ export class RiotRsoController {
             err instanceof Error ? err.message : err
           }`,
         );
+      }
+
+      let session: {
+        userId: string;
+        accessToken: string;
+        refreshToken: string;
+        rememberMe: boolean;
+      };
+
+      if (oauthIntent === 'link') {
+        const wpggUserId = parsedState?.wpggUserId?.trim();
+        if (!wpggUserId) {
+          const target = new URL(successRedirect);
+          target.searchParams.set('error', 'rso_invalid_link_state');
+          res.redirect(HttpStatus.FOUND, target.toString());
+          return;
+        }
+        session =
+          await this.establishWpggSession.issueSessionForExistingUser(
+            wpggUserId,
+          );
+      } else {
+        const sessionResult = await this.establishWpggSession.execute({
+          riotSub,
+          intent: oauthIntent,
+        });
+
+        if (isEstablishRiotOauthSessionError(sessionResult)) {
+          const target = new URL(successRedirect);
+          target.searchParams.set('error', sessionResult.error);
+          target.searchParams.set('intent', oauthIntent);
+          if (sessionResult.error === 'user_not_found') {
+            try {
+              const { code: pendingCode } =
+                await this.createRiotPendingLinkCode.execute({
+                  riotSub,
+                  accessToken: payload.access_token,
+                  cpid: rsoCpid,
+                });
+              target.searchParams.set('riot_link_pending', pendingCode);
+            } catch (err) {
+              this.logger.warn(
+                `riot_link_pending not created: ${
+                  err instanceof Error ? err.message : err
+                }`,
+              );
+            }
+          }
+          res.redirect(HttpStatus.FOUND, target.toString());
+          return;
+        }
+        session = sessionResult;
       }
 
       const linked = await this.linkRiotFromRso.execute({

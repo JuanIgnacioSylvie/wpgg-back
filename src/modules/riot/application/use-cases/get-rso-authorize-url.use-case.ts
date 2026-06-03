@@ -12,6 +12,7 @@ export type GetRsoAuthorizeUrlInput = {
   loginHint?: string;
   uiLocales?: string;
   intent?: RsoIntent;
+  wpggUserId?: string;
 };
 
 @Injectable()
@@ -32,7 +33,10 @@ export class GetRsoAuthorizeUrlUseCase {
     const scopesRaw =
       this.config.get<string>('RIOT_RSO_SCOPES')?.trim() ||
       'openid offline_access cpid';
-    const state = this.stateSigner.create(input.intent ?? 'login');
+    const state = this.stateSigner.create(
+      input.intent ?? 'login',
+      input.wpggUserId,
+    );
 
     const params = new URLSearchParams({
       redirect_uri: redirectUri,

@@ -22,6 +22,7 @@ import { ExchangeRiotSessionCodeUseCase } from '../application/use-cases/exchang
 import { LoginUserUseCase } from '../application/use-cases/login-user.use-case';
 import { LogoutUserUseCase } from '../application/use-cases/logout-user.use-case';
 import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.use-case';
+import { ApplyRiotPendingLinkUseCase } from '@modules/riot/application/use-cases/apply-riot-pending-link.use-case';
 import { RegisterUserUseCase } from '../application/use-cases/register-user.use-case';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { RefreshRequestDto } from './dto/refresh-request.dto';
@@ -32,6 +33,7 @@ import { RiotSessionExchangeRequestDto } from './dto/riot-session-exchange-reque
 export class AuthController {
   constructor(
     private readonly registerUser: RegisterUserUseCase,
+    private readonly applyRiotPendingLink: ApplyRiotPendingLinkUseCase,
     private readonly loginUser: LoginUserUseCase,
     private readonly refreshToken: RefreshTokenUseCase,
     private readonly logoutUser: LogoutUserUseCase,
@@ -44,7 +46,14 @@ export class AuthController {
     @Body() body: RegisterRequestDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const out = await this.registerUser.execute(body);
+    const { riotLinkPendingCode, ...registerBody } = body;
+    const out = await this.registerUser.execute(registerBody);
+    if (riotLinkPendingCode?.trim()) {
+      await this.applyRiotPendingLink.execute({
+        userId: out.userId,
+        riotLinkPendingCode,
+      });
+    }
     attachSessionCookies(res, this.configService, {
       accessToken: out.accessToken,
       refreshToken: out.refreshToken,

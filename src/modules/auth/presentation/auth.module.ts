@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtAuthGuard } from '@shared/infrastructure/guards/jwt-auth.guard';
@@ -20,10 +20,15 @@ import { PrismaUserRepository } from '../infrastructure/persistence/prisma-user.
 import { PrismaRefreshTokenRepository } from '../infrastructure/persistence/prisma-refresh-token.repository';
 import { BcryptHashProvider } from '../infrastructure/providers/bcrypt-hash.provider';
 import { JwtJwtProvider } from '../infrastructure/providers/jwt-jwt.provider';
+import { RIOT_PENDING_LINK_EXCHANGE_CODE_REPOSITORY } from '../domain/repositories/riot-pending-link-exchange-code.repository.interface';
+import { PrismaRiotPendingLinkExchangeCodeRepository } from '../infrastructure/persistence/prisma-riot-pending-link-exchange-code.repository';
+import { CreateRiotPendingLinkCodeUseCase } from '../application/use-cases/create-riot-pending-link-code.use-case';
 import { AuthController } from './auth.controller';
+import { RiotModule } from '@modules/riot/presentation/riot.module';
 
 @Module({
   imports: [
+    forwardRef(() => RiotModule),
     SharedModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -46,6 +51,11 @@ import { AuthController } from './auth.controller';
       provide: RIOT_SESSION_EXCHANGE_CODE_REPOSITORY,
       useClass: PrismaRiotSessionExchangeCodeRepository,
     },
+    {
+      provide: RIOT_PENDING_LINK_EXCHANGE_CODE_REPOSITORY,
+      useClass: PrismaRiotPendingLinkExchangeCodeRepository,
+    },
+    CreateRiotPendingLinkCodeUseCase,
     JwtAuthGuard,
     RegisterUserUseCase,
     LoginUserUseCase,
@@ -61,6 +71,8 @@ import { AuthController } from './auth.controller';
     USER_REPOSITORY,
     EstablishRiotOauthSessionUseCase,
     CreateRiotSessionExchangeCodeUseCase,
+    RIOT_PENDING_LINK_EXCHANGE_CODE_REPOSITORY,
+    CreateRiotPendingLinkCodeUseCase,
   ],
 })
 export class AuthModule {}

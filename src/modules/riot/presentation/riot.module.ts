@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { SharedModule } from '@shared/shared.module';
 import { AuthModule } from '../../auth/presentation/auth.module';
 import { ExchangeRsoCodeUseCase } from '../application/use-cases/exchange-rso-code.use-case';
@@ -7,6 +7,7 @@ import { GetRsoUserinfoUseCase } from '../application/use-cases/get-rso-userinfo
 import { GetMatchHistoryUseCase } from '../application/use-cases/get-match-history.use-case';
 import { GetRankedStatsUseCase } from '../application/use-cases/get-ranked-stats.use-case';
 import { GetSummonerProfileUseCase } from '../application/use-cases/get-summoner-profile.use-case';
+import { ApplyRiotPendingLinkUseCase } from '../application/use-cases/apply-riot-pending-link.use-case';
 import { LinkRiotAccountFromRsoUseCase } from '../application/use-cases/link-riot-account-from-rso.use-case';
 import { LinkRiotAccountUseCase } from '../application/use-cases/link-riot-account.use-case';
 import { RefreshRsoTokensUseCase } from '../application/use-cases/refresh-rso-tokens.use-case';
@@ -24,8 +25,14 @@ import { RiotController } from './riot.controller';
 import { RiotRsoController } from './riot-rso.controller';
 
 @Module({
-  imports: [SharedModule, AuthModule],
-  exports: [RIOT_SERVICE, RIOT_ACCOUNT_REPOSITORY],
+  imports: [SharedModule, forwardRef(() => AuthModule)],
+  exports: [
+    RIOT_SERVICE,
+    RIOT_ACCOUNT_REPOSITORY,
+    ApplyRiotPendingLinkUseCase,
+    LinkRiotAccountFromRsoUseCase,
+    GetRsoAuthorizeUrlUseCase,
+  ],
   controllers: [RiotController, RiotRsoController],
   providers: [
     { provide: RIOT_ACCOUNT_REPOSITORY, useClass: PrismaRiotAccountRepository },
@@ -39,6 +46,7 @@ import { RiotRsoController } from './riot-rso.controller';
     GetRsoUserinfoUseCase,
     LinkRiotAccountUseCase,
     LinkRiotAccountFromRsoUseCase,
+    ApplyRiotPendingLinkUseCase,
     GetSummonerProfileUseCase,
     GetMatchHistoryUseCase,
     GetRankedStatsUseCase,

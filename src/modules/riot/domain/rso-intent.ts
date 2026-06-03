@@ -1,4 +1,4 @@
-export type RsoIntent = 'login' | 'register';
+export type RsoIntent = 'login' | 'register' | 'link';
 
 export const RSO_INTENT_ERROR = {
   USER_NOT_FOUND: 'user_not_found',

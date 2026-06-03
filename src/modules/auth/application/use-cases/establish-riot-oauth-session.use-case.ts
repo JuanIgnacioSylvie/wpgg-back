@@ -70,6 +70,16 @@ export class EstablishRiotOauthSessionUseCase {
     private readonly jwtProvider: IJwtProvider,
   ) {}
 
+  async issueSessionForExistingUser(
+    userId: string,
+  ): Promise<EstablishRiotOauthSessionSuccess> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new InternalServerErrorException();
+    }
+    return this.issueTokensForUser(user);
+  }
+
   async execute(
     input: EstablishRiotOauthSessionInput,
   ): Promise<EstablishRiotOauthSessionResult> {
@@ -100,6 +110,12 @@ export class EstablishRiotOauthSessionUseCase {
       }
     }
 
+    return this.issueTokensForUser(user);
+  }
+
+  private async issueTokensForUser(
+    user: UserEntity,
+  ): Promise<EstablishRiotOauthSessionSuccess> {
     try {
       await this.refreshTokenRepository.enforceMaxActiveTokensForUser(
         user.id,

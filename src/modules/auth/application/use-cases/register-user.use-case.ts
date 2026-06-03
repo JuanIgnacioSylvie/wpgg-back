@@ -26,7 +26,11 @@ import {
 
 export type RegisterUserInput = { email: string; password: string };
 
-export type RegisterUserOutput = { accessToken: string; refreshToken: string };
+export type RegisterUserOutput = {
+  accessToken: string;
+  refreshToken: string;
+  userId: string;
+};
 
 @Injectable()
 export class RegisterUserUseCase {
@@ -80,6 +84,6 @@ export class RegisterUserUseCase {
       throw new InternalServerErrorException();
     }
 
-    return { accessToken, refreshToken: rawRefreshToken };
+    return { accessToken, refreshToken: rawRefreshToken, userId: savedUser.id };
   }
 }

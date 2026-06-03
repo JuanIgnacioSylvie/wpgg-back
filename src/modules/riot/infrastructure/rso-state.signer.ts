@@ -13,18 +13,20 @@ type StatePayload = {
   n: string;
   t: number;
   intent?: RsoIntent;
+  wpggUserId?: string;
 };
 
 @Injectable()
 export class RsoStateSigner implements IRsoStateSigner {
   constructor(private readonly config: ConfigService) {}
 
-  create(intent: RsoIntent = 'login'): string {
+  create(intent: RsoIntent = 'login', wpggUserId?: string): string {
     const secret = this.config.get<string>('JWT_SECRET')!;
     const payload: StatePayload = {
       n: randomBytes(16).toString('hex'),
       t: Date.now(),
       intent,
+      ...(wpggUserId?.trim() ? { wpggUserId: wpggUserId.trim() } : {}),
     };
     const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
     const sig = createHmac('sha256', secret).update(body).digest('base64url');
@@ -44,6 +46,10 @@ export class RsoStateSigner implements IRsoStateSigner {
       nonce: parsed.n,
       timestamp: parsed.t,
       intent: parsed.intent ?? 'login',
+      wpggUserId:
+        typeof parsed.wpggUserId === 'string' && parsed.wpggUserId.length > 0
+          ? parsed.wpggUserId
+          : undefined,
     };
   }
 
@@ -78,9 +84,18 @@ export class RsoStateSigner implements IRsoStateSigner {
     if (
       parsed.intent !== undefined &&
       parsed.intent !== 'login' &&
-      parsed.intent !== 'register'
+      parsed.intent !== 'register' &&
+      parsed.intent !== 'link'
     ) {
       return null;
+    }
+    if (parsed.intent === 'link') {
+      if (
+        typeof parsed.wpggUserId !== 'string' ||
+        parsed.wpggUserId.trim().length === 0
+      ) {
+        return null;
+      }
     }
     return parsed;
   }
