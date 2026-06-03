@@ -3,9 +3,18 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import type { RsoIntent } from '@modules/riot/domain/rso-intent';
 import { RSO_INTENT_ERROR } from '@modules/riot/domain/rso-intent';
+import {
+  IRiotAccountRepository,
+  RIOT_ACCOUNT_REPOSITORY,
+} from '@modules/riot/domain/repositories/riot-account.repository.interface';
+import {
+  IRiotSignOnService,
+  RIOT_SIGN_ON_SERVICE,
+} from '@modules/riot/domain/services/riot-sign-on.service.interface';
 import { RefreshTokenEntity } from '../../domain/entities/refresh-token.entity';
 import { UserEntity } from '../../domain/entities/user.entity';
 import {
@@ -34,6 +43,8 @@ export function placeholderEmailForRiotSub(riotSub: string): string {
 export type EstablishRiotOauthSessionInput = {
   riotSub: string;
   intent: RsoIntent;
+  /** RSO access token — used to resolve linked [RiotAccount] by puuid on login/register. */
+  rsoAccessToken?: string;
 };
 
 export type EstablishRiotOauthSessionSuccess = {
@@ -59,11 +70,17 @@ export function isEstablishRiotOauthSessionError(
 
 @Injectable()
 export class EstablishRiotOauthSessionUseCase {
+  private readonly logger = new Logger(EstablishRiotOauthSessionUseCase.name);
+
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     @Inject(REFRESH_TOKEN_REPOSITORY)
     private readonly refreshTokenRepository: IRefreshTokenRepository,
+    @Inject(RIOT_ACCOUNT_REPOSITORY)
+    private readonly riotAccountRepository: IRiotAccountRepository,
+    @Inject(RIOT_SIGN_ON_SERVICE)
+    private readonly riotSignOn: IRiotSignOnService,
     @Inject(HASH_PROVIDER)
     private readonly hashProvider: IHashProvider,
     @Inject(JWT_PROVIDER)
@@ -84,17 +101,30 @@ export class EstablishRiotOauthSessionUseCase {
     input: EstablishRiotOauthSessionInput,
   ): Promise<EstablishRiotOauthSessionResult> {
     const email = placeholderEmailForRiotSub(input.riotSub);
-    const existingUser = await this.userRepository.findByEmail(email);
+    const placeholderUser = await this.userRepository.findByEmail(email);
+    const riotPuuid = await this.resolveRiotPuuid(input.rsoAccessToken);
+    const linkedByPuuid = riotPuuid
+      ? await this.riotAccountRepository.findByPuuid(riotPuuid)
+      : null;
 
-    if (input.intent === 'login' && !existingUser) {
-      return { error: RSO_INTENT_ERROR.USER_NOT_FOUND };
+    if (input.intent === 'login') {
+      let user = placeholderUser;
+      if (!user && linkedByPuuid) {
+        user = await this.userRepository.findById(linkedByPuuid.userId);
+      }
+      if (!user) {
+        return { error: RSO_INTENT_ERROR.USER_NOT_FOUND };
+      }
+      return this.issueTokensForUser(user);
     }
 
-    if (input.intent === 'register' && existingUser) {
-      return { error: RSO_INTENT_ERROR.USER_ALREADY_EXISTS };
+    if (input.intent === 'register') {
+      if (placeholderUser || linkedByPuuid) {
+        return { error: RSO_INTENT_ERROR.USER_ALREADY_EXISTS };
+      }
     }
 
-    let user = existingUser;
+    let user = placeholderUser;
     if (!user) {
       const passwordHash = await this.hashProvider.hash(randomUUID());
       const userId = randomUUID();
@@ -111,6 +141,26 @@ export class EstablishRiotOauthSessionUseCase {
     }
 
     return this.issueTokensForUser(user);
+  }
+
+  private async resolveRiotPuuid(
+    rsoAccessToken?: string,
+  ): Promise<string | undefined> {
+    const token = rsoAccessToken?.trim();
+    if (!token) {
+      return undefined;
+    }
+    try {
+      const accountMe = await this.riotSignOn.getAccountMe(token);
+      return accountMe.puuid?.trim() || undefined;
+    } catch (err) {
+      this.logger.warn(
+        `RSO accounts/me for session lookup failed: ${
+          err instanceof Error ? err.message : err
+        }`,
+      );
+      return undefined;
+    }
   }
 
   private async issueTokensForUser(

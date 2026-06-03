@@ -223,6 +223,7 @@ export class RiotRsoController {
         const sessionResult = await this.establishWpggSession.execute({
           riotSub,
           intent: oauthIntent,
+          rsoAccessToken: payload.access_token,
         });
 
         if (isEstablishRiotOauthSessionError(sessionResult)) {

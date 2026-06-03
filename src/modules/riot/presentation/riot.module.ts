@@ -29,6 +29,7 @@ import { RiotRsoController } from './riot-rso.controller';
   exports: [
     RIOT_SERVICE,
     RIOT_ACCOUNT_REPOSITORY,
+    RIOT_SIGN_ON_SERVICE,
     ApplyRiotPendingLinkUseCase,
     LinkRiotAccountFromRsoUseCase,
     GetRsoAuthorizeUrlUseCase,
