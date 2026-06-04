@@ -138,6 +138,28 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   RIOT_DEFAULT_LINK_REGION?: string;
+
+  /** Resend API key for transactional email (password reset). */
+  @IsOptional()
+  @IsString()
+  RESEND_API_KEY?: string;
+
+  /** Sender address, e.g. `WPGG <noreply@wpgg.lol>`. */
+  @IsOptional()
+  @IsString()
+  EMAIL_FROM?: string;
+
+  /** SPA route base for reset links, e.g. `https://wpgg.lol/reset-password`. */
+  @IsOptional()
+  @IsString()
+  PASSWORD_RESET_URL?: string;
+
+  /** Password reset token TTL in seconds (default 3600, min 300, max 86400). */
+  @IsOptional()
+  @IsInt()
+  @Min(300)
+  @Max(86400)
+  PASSWORD_RESET_TOKEN_TTL_SEC?: number;
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {

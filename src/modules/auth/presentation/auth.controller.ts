@@ -18,13 +18,18 @@ import {
   clearSessionCookies,
   REFRESH_TOKEN_COOKIE,
 } from '../infrastructure/auth-session-cookies';
+import { Throttle } from '@nestjs/throttler';
 import { ExchangeRiotSessionCodeUseCase } from '../application/use-cases/exchange-riot-session-code.use-case';
 import { LoginUserUseCase } from '../application/use-cases/login-user.use-case';
 import { LogoutUserUseCase } from '../application/use-cases/logout-user.use-case';
 import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.use-case';
+import { RequestPasswordResetUseCase } from '../application/use-cases/request-password-reset.use-case';
+import { ResetPasswordUseCase } from '../application/use-cases/reset-password.use-case';
 import { ApplyRiotPendingLinkUseCase } from '@modules/riot/application/use-cases/apply-riot-pending-link.use-case';
 import { RegisterUserUseCase } from '../application/use-cases/register-user.use-case';
 import { LoginRequestDto } from './dto/login-request.dto';
+import { ForgotPasswordRequestDto } from './dto/forgot-password-request.dto';
+import { ResetPasswordRequestDto } from './dto/reset-password-request.dto';
 import { RefreshRequestDto } from './dto/refresh-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
 import { RiotSessionExchangeRequestDto } from './dto/riot-session-exchange-request.dto';
@@ -38,6 +43,8 @@ export class AuthController {
     private readonly refreshToken: RefreshTokenUseCase,
     private readonly logoutUser: LogoutUserUseCase,
     private readonly exchangeRiotSessionCode: ExchangeRiotSessionCodeUseCase,
+    private readonly requestPasswordReset: RequestPasswordResetUseCase,
+    private readonly resetPassword: ResetPasswordUseCase,
     private readonly configService: ConfigService,
   ) {}
 
@@ -105,6 +112,25 @@ export class AuthController {
       };
     }
     return { accessToken: out.accessToken };
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async forgotPassword(@Body() body: ForgotPasswordRequestDto) {
+    await this.requestPasswordReset.execute({ email: body.email });
+    return { ok: true };
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  async resetPasswordRoute(@Body() body: ResetPasswordRequestDto) {
+    await this.resetPassword.execute({
+      token: body.token,
+      password: body.password,
+    });
+    return { ok: true };
   }
 
   /**

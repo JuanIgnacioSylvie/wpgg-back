@@ -53,6 +53,7 @@ model User {
   updatedAt                DateTime                  @updatedAt
   riotAccount              RiotAccount?
   refreshTokens            RefreshToken[]
+  passwordResetTokens      PasswordResetToken[]
   riotSessionExchangeCodes RiotSessionExchangeCode[]
   wpggWallet               WpggWallet?
   missionDays              MissionDay[]
@@ -80,6 +81,19 @@ model RefreshToken {
   createdAt DateTime @default(now())
   revoked   Boolean  @default(false)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  codeHash  String    @unique
+  userId    String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
 }
 
 model RiotSessionExchangeCode {
