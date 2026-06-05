@@ -87,6 +87,31 @@ export class PrismaWalletRepository {
     });
   }
 
+  async credit(
+    userId: string,
+    amount: number,
+    type: WpggTransactionType,
+    referenceId: string,
+    description: string,
+  ) {
+    const wallet = await this.ensureWallet(userId);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.wpggTransaction.create({
+        data: {
+          walletId: wallet.id,
+          type,
+          amount,
+          referenceId,
+          description,
+        },
+      });
+      return tx.wpggWallet.update({
+        where: { id: wallet.id },
+        data: { balance: { increment: amount } },
+      });
+    });
+  }
+
   listTransactions(
     userId: string,
     filter: 'all' | 'income' | 'expense',

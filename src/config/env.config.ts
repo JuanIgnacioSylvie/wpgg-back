@@ -27,6 +27,10 @@ const RELAX_ENV_DEFAULTS: Record<string, unknown> = {
   PORT: 3000,
   NODE_ENV: NodeEnvironment.Development,
   ALLOWED_ORIGINS: '*',
+  POLYGON_RPC_URL: 'https://polygon-rpc.com',
+  PRIVATE_KEY:
+    '0xac0974bec39a17e36ba4a6b4d38bf08e81be68e78965973863080625f31f50a4',
+  CONTRACT_ADDRESS: '0x1226A2972e5F8b5aEF7B7381cEA1AE8Ce3B2b188',
 };
 
 class EnvironmentVariables {
@@ -160,6 +164,21 @@ class EnvironmentVariables {
   @Min(300)
   @Max(86400)
   PASSWORD_RESET_TOKEN_TTL_SEC?: number;
+
+  /** Polygon Mainnet JSON-RPC endpoint. */
+  @IsString()
+  @IsNotEmpty({ message: 'POLYGON_RPC_URL is required' })
+  POLYGON_RPC_URL: string;
+
+  /** Owner wallet private key for contract `rewardPlayer` calls. */
+  @IsString()
+  @IsNotEmpty({ message: 'PRIVATE_KEY is required' })
+  PRIVATE_KEY: string;
+
+  /** WPGG token contract address on Polygon Mainnet. */
+  @IsString()
+  @IsNotEmpty({ message: 'CONTRACT_ADDRESS is required' })
+  CONTRACT_ADDRESS: string;
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {

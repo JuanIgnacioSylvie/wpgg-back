@@ -9,6 +9,8 @@ import { RiotModule } from './modules/riot/presentation/riot.module';
 import { DdragonModule } from './modules/ddragon/presentation/ddragon.module';
 import { MissionsModule } from './modules/missions/presentation/missions.module';
 import { WalletModule } from './modules/wallet/presentation/wallet.module';
+import { BlockchainModule } from './modules/blockchain/presentation/blockchain.module';
+import { WithdrawalModule } from './modules/withdrawals/presentation/withdrawal.module';
 import { SharedModule } from './shared/shared.module';
 
 @Module({
@@ -23,6 +25,8 @@ import { SharedModule } from './shared/shared.module';
     DdragonModule,
     WalletModule,
     MissionsModule,
+    BlockchainModule,
+    WithdrawalModule,
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
