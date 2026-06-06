@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { normalizeEthereumPrivateKey } from '../../../config/ethereum-key';
 import { Contract, JsonRpcProvider, Wallet, isAddress, parseUnits } from 'ethers';
 import { WPGG_CONTRACT_ABI } from './abis/wpgg-contract.abi';
 
@@ -17,7 +18,9 @@ export class BlockchainService {
 
   constructor(private readonly configService: ConfigService) {
     const rpcUrl = this.configService.getOrThrow<string>('POLYGON_RPC_URL');
-    const privateKey = this.configService.getOrThrow<string>('PRIVATE_KEY');
+    const privateKey = normalizeEthereumPrivateKey(
+      this.configService.getOrThrow<string>('PRIVATE_KEY'),
+    );
     const contractAddress =
       this.configService.getOrThrow<string>('CONTRACT_ADDRESS');
 

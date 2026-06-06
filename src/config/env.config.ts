@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
   MinLength,
@@ -173,6 +174,10 @@ class EnvironmentVariables {
   /** Owner wallet private key for contract `rewardPlayer` calls. */
   @IsString()
   @IsNotEmpty({ message: 'PRIVATE_KEY is required' })
+  @Matches(/^(0x)?[0-9a-fA-F]{64}$/, {
+    message:
+      'PRIVATE_KEY must be a 64-character hexadecimal string (optional 0x prefix). Check that Railway has the real wallet key, not a placeholder or masked value.',
+  })
   PRIVATE_KEY: string;
 
   /** WPGG token contract address on Polygon Mainnet. */
