@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import type { RsoIntent } from '../domain/rso-intent';
+import type { RsoPlatform } from '../domain/rso-platform';
+import { parseRsoPlatform } from '../domain/rso-platform';
 import {
   IRsoStateSigner,
   ParsedRsoState,
@@ -14,19 +16,25 @@ type StatePayload = {
   t: number;
   intent?: RsoIntent;
   wpggUserId?: string;
+  platform?: RsoPlatform;
 };
 
 @Injectable()
 export class RsoStateSigner implements IRsoStateSigner {
   constructor(private readonly config: ConfigService) {}
 
-  create(intent: RsoIntent = 'login', wpggUserId?: string): string {
+  create(
+    intent: RsoIntent = 'login',
+    wpggUserId?: string,
+    platform?: RsoPlatform,
+  ): string {
     const secret = this.config.get<string>('JWT_SECRET')!;
     const payload: StatePayload = {
       n: randomBytes(16).toString('hex'),
       t: Date.now(),
       intent,
       ...(wpggUserId?.trim() ? { wpggUserId: wpggUserId.trim() } : {}),
+      ...(platform ? { platform } : {}),
     };
     const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
     const sig = createHmac('sha256', secret).update(body).digest('base64url');
@@ -50,6 +58,7 @@ export class RsoStateSigner implements IRsoStateSigner {
         typeof parsed.wpggUserId === 'string' && parsed.wpggUserId.length > 0
           ? parsed.wpggUserId
           : undefined,
+      platform: parseRsoPlatform(parsed.platform),
     };
   }
 
@@ -96,6 +105,9 @@ export class RsoStateSigner implements IRsoStateSigner {
       ) {
         return null;
       }
+    }
+    if (parsed.platform !== undefined && parsed.platform !== 'mobile') {
+      return null;
     }
     return parsed;
   }

@@ -13,4 +13,9 @@ export class RsoSignInQueryDto {
   @IsOptional()
   @IsIn(['true', 'false', '0', '1'])
   redirect?: string;
+
+  /** `mobile` — success redirect uses `RIOT_RSO_MOBILE_SUCCESS_REDIRECT_URL` (deep link). */
+  @IsOptional()
+  @IsIn(['mobile'])
+  platform?: string;
 }

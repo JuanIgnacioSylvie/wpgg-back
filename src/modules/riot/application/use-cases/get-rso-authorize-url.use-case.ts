@@ -1,6 +1,7 @@
 import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { RsoIntent } from '../../domain/rso-intent';
+import type { RsoPlatform } from '../../domain/rso-platform';
 import {
   IRsoStateSigner,
   RSO_STATE_SIGNER,
@@ -13,6 +14,7 @@ export type GetRsoAuthorizeUrlInput = {
   uiLocales?: string;
   intent?: RsoIntent;
   wpggUserId?: string;
+  platform?: RsoPlatform;
 };
 
 @Injectable()
@@ -36,6 +38,7 @@ export class GetRsoAuthorizeUrlUseCase {
     const state = this.stateSigner.create(
       input.intent ?? 'login',
       input.wpggUserId,
+      input.platform,
     );
 
     const params = new URLSearchParams({

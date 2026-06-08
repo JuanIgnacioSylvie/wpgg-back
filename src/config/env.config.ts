@@ -148,6 +148,14 @@ class EnvironmentVariables {
   @IsString()
   RIOT_RSO_SUCCESS_REDIRECT_URL?: string;
 
+  /**
+   * Mobile app deep link after successful RSO (`platform=mobile` in OAuth state).
+   * Default when unset: `wpgg://auth/riot-callback`
+   */
+  @IsOptional()
+  @IsString()
+  RIOT_RSO_MOBILE_SUCCESS_REDIRECT_URL?: string;
+
   /** Space-separated scopes (default: openid offline_access cpid) */
   @IsOptional()
   @IsString()

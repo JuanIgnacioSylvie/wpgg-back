@@ -33,6 +33,8 @@ import { GetRsoUserinfoUseCase } from '../application/use-cases/get-rso-userinfo
 import { LinkRiotAccountFromRsoUseCase } from '../application/use-cases/link-riot-account-from-rso.use-case';
 import { RefreshRsoTokensUseCase } from '../application/use-cases/refresh-rso-tokens.use-case';
 import { RsoRefreshRequestDto } from './dto/rso-refresh-request.dto';
+import { parseRsoPlatform } from '../domain/rso-platform';
+import { resolveRsoSuccessRedirectUrl } from '../infrastructure/rso-success-redirect';
 import { RsoSignInQueryDto } from './dto/rso-sign-in-query.dto';
 import { RsoUserinfoRequestDto } from './dto/rso-userinfo-request.dto';
 
@@ -40,7 +42,8 @@ import { RsoUserinfoRequestDto } from './dto/rso-userinfo-request.dto';
  * Riot Sign On (OAuth2 / OIDC) — public routes for authorization code flow.
  * Configure RIOT_RSO_CLIENT_ID, RIOT_RSO_REDIRECT_URI, and either
  * RIOT_RSO_CLIENT_SECRET or RIOT_RSO_CLIENT_ASSERTION.
- * Optional: RIOT_RSO_SUCCESS_REDIRECT_URL — after login, issues wpgg cookies and redirects
+ * Optional: RIOT_RSO_SUCCESS_REDIRECT_URL (web) / RIOT_RSO_MOBILE_SUCCESS_REDIRECT_URL (app,
+ * default `wpgg://auth/riot-callback`) — after login, issues wpgg cookies and redirects
  * there with `?riot_session=<one-time code>` (plus cookies on the API host). The SPA redeems
  * the code via `POST /auth/riot-session`. If the code cannot be stored, redirects with
  * `?error=riot_session_unavailable` (no session cookies). On OAuth error, `?error=` /
@@ -89,6 +92,7 @@ export class RiotRsoController {
       loginHint: query.loginHint,
       uiLocales: query.uiLocales,
       intent: 'login',
+      platform: parseRsoPlatform(query.platform),
     });
     if (query.redirect === 'true' || query.redirect === '1') {
       return res.redirect(authorizeUrl);
@@ -109,6 +113,7 @@ export class RiotRsoController {
       uiLocales: query.uiLocales,
       intent: 'link',
       wpggUserId: userId,
+      platform: parseRsoPlatform(query.platform),
     });
     if (query.redirect === 'true' || query.redirect === '1') {
       return res.redirect(authorizeUrl);
@@ -125,6 +130,7 @@ export class RiotRsoController {
       loginHint: query.loginHint,
       uiLocales: query.uiLocales,
       intent: 'register',
+      platform: parseRsoPlatform(query.platform),
     });
     if (query.redirect === 'true' || query.redirect === '1') {
       return res.redirect(authorizeUrl);
@@ -141,8 +147,13 @@ export class RiotRsoController {
     @Query('error_description') errorDescription?: string,
     @Query('includeUserinfo') includeUserinfo?: string,
   ) {
-    const successRedirect =
-      this.config.get<string>('RIOT_RSO_SUCCESS_REDIRECT_URL')?.trim() ?? '';
+    const parsedStateForError = state?.trim()
+      ? this.stateSigner.parse(state)
+      : null;
+    const successRedirect = resolveRsoSuccessRedirectUrl(
+      this.config,
+      parsedStateForError?.platform,
+    );
 
     if (error) {
       if (successRedirect) {
