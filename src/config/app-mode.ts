@@ -4,7 +4,8 @@ export function parseAppMode(value: unknown): AppMode {
   if (value === 'api' || value === 'worker' || value === 'all') {
     return value;
   }
-  return 'all';
+  // Sin APP_MODE explícito → solo API (seguro en Railway sin Redis).
+  return 'api';
 }
 
 export function getAppMode(): AppMode {

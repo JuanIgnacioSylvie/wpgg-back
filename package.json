@@ -8,7 +8,7 @@
   "scripts": {
     "build": "node ./node_modules/@nestjs/cli/bin/nest.js build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "node dist/main",
+    "start": "node dist/main-api",
     "start:api": "node dist/main-api",
     "start:worker": "node dist/main-worker",
     "start:all": "node dist/main",

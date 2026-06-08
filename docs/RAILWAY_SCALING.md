@@ -30,11 +30,15 @@ Variables **sin cambio**: `DATABASE_URL`, `JWT_SECRET`, `RIOT_API_KEY`, `ALLOWED
 
 **No** hace falta `REDIS_URL` en el service API (Fase 1).
 
-Start command:
+Start command (elige una):
 
 ```bash
 npm run start:with-migrate
 ```
+
+O si Railway usa el script por defecto `npm start`, también vale — apunta a `main-api` y no requiere Redis.
+
+**No uses** `node dist/main` en Railway sin `REDIS_URL` y `APP_MODE=all`.
 
 Health check path: `/health`
 
