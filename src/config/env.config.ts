@@ -41,6 +41,16 @@ const RELAX_ENV_DEFAULTS: Record<string, unknown> = {
   MISSION_SYNC_QUEUE_CONCURRENCY: 3,
 };
 
+/** API-only vars; worker process ignores them (filled when missing in APP_MODE=worker). */
+const WORKER_UNUSED_DEFAULTS: Record<string, unknown> = {
+  JWT_SECRET: `worker-unused-${'0'.repeat(18)}`,
+  JWT_ACCESS_EXPIRY: '15m',
+  ALLOWED_ORIGINS: '*',
+  POLYGON_RPC_URL: 'https://polygon-rpc.com',
+  PRIVATE_KEY: `0x${'0'.repeat(64)}`,
+  CONTRACT_ADDRESS: '0x1226A2972e5F8b5aEF7B7381cEA1AE8Ce3B2b188',
+};
+
 class EnvironmentVariables {
   @IsOptional()
   @IsString()
@@ -230,10 +240,29 @@ class EnvironmentVariables {
   MISSION_SYNC_QUEUE_CONCURRENCY?: number;
 }
 
+function applyWorkerUnusedDefaults(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const result = { ...config };
+  for (const [key, value] of Object.entries(WORKER_UNUSED_DEFAULTS)) {
+    const current = result[key];
+    if (current === undefined || current === '') {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 export function validate(config: Record<string, unknown>): EnvironmentVariables {
-  const merged: Record<string, unknown> = isRelaxEnv(config['RELAX_VALIDATIONS'])
+  const appModeEarly = parseAppMode(config['APP_MODE']);
+
+  let merged: Record<string, unknown> = isRelaxEnv(config['RELAX_VALIDATIONS'])
     ? { ...RELAX_ENV_DEFAULTS, ...config }
     : { ...config };
+
+  if (appModeEarly === 'worker' && !isRelaxEnv(config['RELAX_VALIDATIONS'])) {
+    merged = applyWorkerUnusedDefaults(merged);
+  }
 
   const portRaw = merged['PORT'];
   const portResolved =

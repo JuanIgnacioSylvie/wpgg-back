@@ -52,7 +52,13 @@ APP_MODE=worker
 REDIS_URL=${{Redis.REDIS_URL}}   # referencia al plugin Redis
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 RIOT_API_KEY=...
-JWT_SECRET=...                    # misma DB; no expone HTTP auth
+NODE_ENV=production
+```
+
+Opcional (el worker no las usa en Fase 1; el código rellena defaults si faltan):
+
+```bash
+JWT_SECRET=${{wpgg-api.JWT_SECRET}}
 ```
 
 3. Start command:
