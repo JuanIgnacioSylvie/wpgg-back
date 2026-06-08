@@ -4,18 +4,32 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { todayMissionCalendarDate } from '../domain/mission-timezone.util';
-import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
+import { ConfigService } from '@nestjs/config';
+import { RedisLockService } from '@shared/infrastructure/redis/redis-lock.service';
+import { MissionExpiryProducer } from './mission-expiry.producer';
+
+const LOCK_KEY = 'lock:mission-expiry-tick';
+const LOCK_TTL_SEC = 3000;
 
 @Injectable()
 export class MissionExpiryScheduler implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MissionExpiryScheduler.name);
   private interval?: ReturnType<typeof setInterval>;
+  private readonly intervalMs: number;
 
-  constructor(private readonly repo: PrismaMissionsRepository) {}
+  constructor(
+    private readonly producer: MissionExpiryProducer,
+    private readonly lock: RedisLockService,
+    config: ConfigService,
+  ) {
+    this.intervalMs = config.get<number>(
+      'MISSION_EXPIRY_INTERVAL_MS',
+      60 * 60 * 1000,
+    );
+  }
 
   onModuleInit() {
-    this.interval = setInterval(() => void this.tick(), 60 * 60 * 1000);
+    this.interval = setInterval(() => void this.tick(), this.intervalMs);
     void this.tick();
   }
 
@@ -26,12 +40,16 @@ export class MissionExpiryScheduler implements OnModuleInit, OnModuleDestroy {
   }
 
   private async tick() {
-    const today = todayMissionCalendarDate();
-    const yesterday = new Date(today);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    const result = await this.repo.expireActiveMissionsBeforeDate(yesterday);
-    if (result.count > 0) {
-      this.logger.log(`Expired ${result.count} active missions`);
+    const acquired = await this.lock.tryAcquire(LOCK_KEY, LOCK_TTL_SEC);
+    if (!acquired) {
+      return;
+    }
+
+    try {
+      await this.producer.enqueueExpiry();
+      this.logger.debug('Enqueued mission expiry job');
+    } catch (error) {
+      this.logger.warn(`Failed to enqueue mission expiry: ${error}`);
     }
   }
 }

@@ -8,14 +8,12 @@ import { AuthModule } from './modules/auth/presentation/auth.module';
 import { BlockchainModule } from './modules/blockchain/presentation/blockchain.module';
 import { DdragonModule } from './modules/ddragon/presentation/ddragon.module';
 import { MissionsModule } from './modules/missions/presentation/missions.module';
-import { MissionsWorkerModule } from './modules/missions/presentation/missions-worker.module';
 import { RiotModule } from './modules/riot/presentation/riot.module';
 import { WalletModule } from './modules/wallet/presentation/wallet.module';
 import { WithdrawalModule } from './modules/withdrawals/presentation/withdrawal.module';
 import { HealthModule } from './shared/presentation/health/health.module';
 import { SharedModule } from './shared/shared.module';
 
-/** Local dev: HTTP API + background workers in one process (APP_MODE=all). */
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -29,7 +27,6 @@ import { SharedModule } from './shared/shared.module';
     DdragonModule,
     WalletModule,
     MissionsModule,
-    MissionsWorkerModule,
     BlockchainModule,
     WithdrawalModule,
     ThrottlerModule.forRootAsync({
@@ -50,4 +47,4 @@ import { SharedModule } from './shared/shared.module';
     },
   ],
 })
-export class AppModule {}
+export class AppApiModule {}

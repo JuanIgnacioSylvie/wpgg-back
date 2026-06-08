@@ -12,6 +12,7 @@ import {
   MinLength,
   validateSync,
 } from 'class-validator';
+import { parseAppMode } from './app-mode';
 import { isRelaxEnv } from './relax-env';
 
 enum NodeEnvironment {
@@ -32,6 +33,12 @@ const RELAX_ENV_DEFAULTS: Record<string, unknown> = {
   PRIVATE_KEY:
     '0xac0974bec39a17e36ba4a6b4d38bf08e81be68e78965973863080625f31f50a4',
   CONTRACT_ADDRESS: '0x1226A2972e5F8b5aEF7B7381cEA1AE8Ce3B2b188',
+  APP_MODE: 'all',
+  REDIS_URL: 'redis://localhost:6379',
+  BULL_PREFIX: 'wpgg',
+  MISSION_SYNC_INTERVAL_MS: 300_000,
+  MISSION_EXPIRY_INTERVAL_MS: 3_600_000,
+  MISSION_SYNC_QUEUE_CONCURRENCY: 3,
 };
 
 class EnvironmentVariables {
@@ -184,6 +191,43 @@ class EnvironmentVariables {
   @IsString()
   @IsNotEmpty({ message: 'CONTRACT_ADDRESS is required' })
   CONTRACT_ADDRESS: string;
+
+  /**
+   * Process role: `api` (HTTP only), `worker` (background jobs), `all` (local dev).
+   */
+  @IsOptional()
+  @IsString()
+  @IsIn(['api', 'worker', 'all'])
+  APP_MODE?: 'api' | 'worker' | 'all';
+
+  /** Required when APP_MODE is `worker` or `all`. */
+  @IsOptional()
+  @IsString()
+  REDIS_URL?: string;
+
+  /** BullMQ key prefix in Redis (default: wpgg). */
+  @IsOptional()
+  @IsString()
+  BULL_PREFIX?: string;
+
+  /** Mission sync scheduler interval in ms (default: 300000 = 5 min). */
+  @IsOptional()
+  @IsInt()
+  @Min(60_000)
+  MISSION_SYNC_INTERVAL_MS?: number;
+
+  /** Mission expiry scheduler interval in ms (default: 3600000 = 1 h). */
+  @IsOptional()
+  @IsInt()
+  @Min(60_000)
+  MISSION_EXPIRY_INTERVAL_MS?: number;
+
+  /** Concurrent mission-sync jobs per worker process (default: 3). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  MISSION_SYNC_QUEUE_CONCURRENCY?: number;
 }
 
 export function validate(config: Record<string, unknown>): EnvironmentVariables {
@@ -217,6 +261,18 @@ export function validate(config: Record<string, unknown>): EnvironmentVariables 
       .map((error) => Object.values(error.constraints ?? {}).join(', '))
       .join('; ');
     throw new Error(`Environment validation failed: ${messages}`);
+  }
+
+  const appMode = parseAppMode(validatedConfig.APP_MODE ?? merged['APP_MODE']);
+  validatedConfig.APP_MODE = appMode;
+
+  if (
+    (appMode === 'worker' || appMode === 'all') &&
+    !validatedConfig.REDIS_URL?.trim()
+  ) {
+    throw new Error(
+      'Environment validation failed: REDIS_URL is required when APP_MODE is worker or all',
+    );
   }
 
   return validatedConfig;
