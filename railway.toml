@@ -1,10 +1,10 @@
-# Railway Railpack — API service (wpgg-api)
-# Build compila; migrate corre en preDeploy con DATABASE_URL disponible.
+# Railway Railpack — wpgg-api y wpgg-worker (mismo repo).
+# start:railway elige main-api o main-worker según APP_MODE.
 
 [build]
 buildCommand = "npm run build"
 
 [deploy]
 preDeployCommand = ["npm run prisma:deploy"]
-startCommand = "npm run start:api"
+startCommand = "npm run start:railway"
 healthcheckPath = "/health"

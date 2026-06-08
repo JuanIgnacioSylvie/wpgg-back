@@ -6,8 +6,8 @@ Arquitectura con dos servicios en el mismo repo y Redis compartido.
 
 | Service | Start command | `APP_MODE` | Redis |
 |---------|---------------|------------|-------|
-| **wpgg-api** | `npm run start:api` (+ `prisma:deploy` en preDeploy vía `railway.toml`) | `api` | No |
-| **wpgg-worker** | `npm run start:prod:worker` | `worker` | Sí |
+| **wpgg-api** | `npm run start:railway` (vía `railway.toml`; usa `main-api` si `APP_MODE=api`) | `api` | No |
+| **wpgg-worker** | `npm run start:railway` (mismo `railway.toml`; usa `main-worker` si `APP_MODE=worker`) | `worker` | Sí |
 | **Redis** | Railway plugin | — | — |
 | **PostgreSQL** | Railway plugin | — | — |
 
@@ -34,7 +34,7 @@ El repo incluye `railway.toml` para el service API:
 
 - **Build:** `npm run build` (solo compila; no necesita `DATABASE_URL`)
 - **Pre-deploy:** `npm run prisma:deploy` (migraciones con `DATABASE_URL`)
-- **Start:** `npm run start:api`
+- **Start:** `npm run start:railway` (con `APP_MODE=api`)
 
 Si en el dashboard de Railway tenías **Build Command** = `npm run start:with-migrate`, borralo o dejalo vacío para que use `railway.toml`. Ese script mezcla migrate + start y falla en build porque ahí no hay `DATABASE_URL`.
 
@@ -61,17 +61,9 @@ Opcional (el worker no las usa en Fase 1; el código rellena defaults si faltan)
 JWT_SECRET=${{wpgg-api.JWT_SECRET}}
 ```
 
-3. Start command:
+3. Start command: dejar vacío en el dashboard para usar `railway.toml` (`npm run start:railway`). Con `APP_MODE=worker` arranca `main-worker` automáticamente.
 
-```bash
-npm run build && npm run start:prod:worker
-```
-
-O si el build ya corre en deploy:
-
-```bash
-npm run start:prod:worker
-```
+Si tenías un override manual (`npm run start:api` o `start:prod:worker`), bórralo para que use el toml del repo.
 
 4. Health check: `/health` (debe responder `{ status: "ok", mode: "worker" }`).
 5. **Réplicas**: mantener **1** instancia del worker (los schedulers usan lock Redis, pero un solo worker es más simple).
