@@ -6,7 +6,7 @@ Arquitectura con dos servicios en el mismo repo y Redis compartido.
 
 | Service | Start command | `APP_MODE` | Redis |
 |---------|---------------|------------|-------|
-| **wpgg-api** | `npm run start:with-migrate` | `api` | No |
+| **wpgg-api** | `npm run start:api` (+ `prisma:deploy` en preDeploy vía `railway.toml`) | `api` | No |
 | **wpgg-worker** | `npm run start:prod:worker` | `worker` | Sí |
 | **Redis** | Railway plugin | — | — |
 | **PostgreSQL** | Railway plugin | — | — |
@@ -30,13 +30,13 @@ Variables **sin cambio**: `DATABASE_URL`, `JWT_SECRET`, `RIOT_API_KEY`, `ALLOWED
 
 **No** hace falta `REDIS_URL` en el service API (Fase 1).
 
-Start command (elige una):
+El repo incluye `railway.toml` para el service API:
 
-```bash
-npm run start:with-migrate
-```
+- **Build:** `npm run build` (solo compila; no necesita `DATABASE_URL`)
+- **Pre-deploy:** `npm run prisma:deploy` (migraciones con `DATABASE_URL`)
+- **Start:** `npm run start:api`
 
-O si Railway usa el script por defecto `npm start`, también vale — apunta a `main-api` y no requiere Redis.
+Si en el dashboard de Railway tenías **Build Command** = `npm run start:with-migrate`, borralo o dejalo vacío para que use `railway.toml`. Ese script mezcla migrate + start y falla en build porque ahí no hay `DATABASE_URL`.
 
 **No uses** `node dist/main` en Railway sin `REDIS_URL` y `APP_MODE=all`.
 

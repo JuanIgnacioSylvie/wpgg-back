@@ -1,0 +1,10 @@
+# Railway Railpack — API service (wpgg-api)
+# Build compila; migrate corre en preDeploy con DATABASE_URL disponible.
+
+[build]
+buildCommand = "npm run build"
+
+[deploy]
+preDeployCommand = ["npm run prisma:deploy"]
+startCommand = "npm run start:api"
+healthcheckPath = "/health"
