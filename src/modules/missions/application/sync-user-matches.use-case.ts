@@ -17,6 +17,7 @@ import {
 import { isMatchOnMissionDay } from '../domain/mission-timezone.util';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
+import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import { UserMissionContextService } from './user-mission-context.service';
 
 const SYNC_MATCH_COUNT = 30;
@@ -32,6 +33,7 @@ export class SyncUserMatchesUseCase {
   constructor(
     private readonly repo: PrismaMissionsRepository,
     private readonly walletRepo: PrismaWalletRepository,
+    private readonly prisma: PrismaService,
     private readonly context: UserMissionContextService,
     @Inject(RIOT_SERVICE) private readonly riotService: IRiotService,
   ) {}
@@ -128,22 +130,31 @@ export class SyncUserMatchesUseCase {
     }
 
     const percent = progressPercentFromState(ctx, progress);
-    let status: UserMissionStatus = UserMissionStatus.ACTIVE;
-    if (isMissionComplete(ctx, progress)) {
-      status = UserMissionStatus.COMPLETED;
-      await this.walletRepo.creditMissionReward(
-        userId,
-        mission.template.rewardWpgg,
-        `mission:${mission.id}`,
-        `Mission completed: ${mission.template.titleEn}`,
-      );
-    }
+    const completed = isMissionComplete(ctx, progress);
+    const status = completed
+      ? UserMissionStatus.COMPLETED
+      : UserMissionStatus.ACTIVE;
 
-    await this.repo.updateUserMissionProgress(
-      mission.id,
-      percent,
-      progress as Prisma.InputJsonValue,
-      status,
-    );
+    await this.prisma.$transaction(async (tx) => {
+      if (completed) {
+        await this.walletRepo.creditMissionReward(
+          userId,
+          mission.template.rewardWpgg,
+          `mission:${mission.id}`,
+          `Mission completed: ${mission.template.titleEn}`,
+          tx,
+        );
+      }
+
+      await tx.userMission.update({
+        where: { id: mission.id },
+        data: {
+          progressPercent: percent,
+          progressJson: progress as Prisma.InputJsonValue,
+          status,
+          completedAt: completed ? new Date() : undefined,
+        },
+      });
+    });
   }
 }

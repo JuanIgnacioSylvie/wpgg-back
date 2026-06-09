@@ -6,10 +6,10 @@ import {
 import { WpggTransactionType } from '@prisma/client';
 import { isAddress } from 'ethers';
 import { BlockchainService } from '@modules/blockchain/infrastructure/blockchain.service';
+import { InsufficientBalanceError } from '@modules/wallet/domain/errors/insufficient-balance.error';
+import { WPGG_MIN_WITHDRAW } from '@modules/wallet/domain/wpgg-economy.constants';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
 import { PrismaWithdrawalRepository } from '../infrastructure/persistence/prisma-withdrawal.repository';
-
-const MIN_WITHDRAW_WPGG = 1000;
 
 @Injectable()
 export class WithdrawalService {
@@ -24,9 +24,9 @@ export class WithdrawalService {
     walletAddress: string,
     amountWpgg: number,
   ) {
-    if (amountWpgg < MIN_WITHDRAW_WPGG) {
+    if (amountWpgg < WPGG_MIN_WITHDRAW) {
       throw new BadRequestException(
-        `Minimum withdrawal amount is ${MIN_WITHDRAW_WPGG} WPGG`,
+        `Minimum withdrawal amount is ${WPGG_MIN_WITHDRAW} WPGG`,
       );
     }
 
@@ -53,9 +53,12 @@ export class WithdrawalService {
         `withdrawal:${withdrawal.id}`,
         `Withdrawal to ${walletAddress}`,
       );
-    } catch {
+    } catch (error) {
       await this.withdrawalRepo.markFailed(withdrawal.id);
-      throw new BadRequestException('Insufficient WPGG balance');
+      if (error instanceof InsufficientBalanceError) {
+        throw new BadRequestException('Insufficient WPGG balance');
+      }
+      throw error;
     }
 
     try {

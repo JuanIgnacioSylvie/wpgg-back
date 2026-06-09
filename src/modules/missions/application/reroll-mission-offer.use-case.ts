@@ -1,24 +1,27 @@
+import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InsufficientBalanceError } from '@modules/wallet/domain/errors/insufficient-balance.error';
+import { WPGG_REROLL_COST } from '@modules/wallet/domain/wpgg-economy.constants';
+import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
+import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import { mapOffer } from './mission-response.mapper';
 import { MissionOfferGeneratorService } from './mission-offer-generator.service';
 import {
   MissionDayWithRelations,
   PrismaMissionsRepository,
 } from '../infrastructure/persistence/prisma-missions.repository';
-import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
 import { UserMissionContextService } from './user-mission-context.service';
-
-const REROLL_COST = 5;
 
 @Injectable()
 export class RerollMissionOfferUseCase {
   constructor(
     private readonly repo: PrismaMissionsRepository,
     private readonly walletRepo: PrismaWalletRepository,
+    private readonly prisma: PrismaService,
     private readonly context: UserMissionContextService,
     private readonly offerGen: MissionOfferGeneratorService,
   ) {}
@@ -31,11 +34,6 @@ export class RerollMissionOfferUseCase {
     }
     if (offer.userMission) {
       throw new BadRequestException('Cannot reroll an accepted mission');
-    }
-
-    const wallet = await this.walletRepo.ensureWallet(userId);
-    if (wallet.balance < REROLL_COST) {
-      throw new BadRequestException('Insufficient WPGG balance for reroll');
     }
 
     const dayOffers: MissionDayWithRelations | null =
@@ -53,33 +51,47 @@ export class RerollMissionOfferUseCase {
       templates,
     );
 
-    await this.walletRepo.debit(
-      userId,
-      REROLL_COST,
-      'REROLL',
-      `reroll:${offerId}:${Date.now()}`,
-      'Mission reroll',
-    );
-
     const championId =
       replacement.ruleType === 'CHAMPION_GAMES_WINS'
         ? this.offerGen.randomChampionId()
         : undefined;
 
-    const updated = await this.repo.updateOfferTemplate(
-      offerId,
-      replacement.id,
-      championId,
-    );
+    try {
+      const updated = await this.prisma.$transaction(async (tx) => {
+        await this.walletRepo.debit(
+          userId,
+          WPGG_REROLL_COST,
+          'REROLL',
+          `reroll:${offerId}:${randomUUID()}`,
+          'Mission reroll',
+          tx,
+        );
 
-    return mapOffer(
-      {
-        ...offer,
-        template: updated.template,
-        templateId: updated.templateId,
-        championId: updated.championId,
-      },
-      false,
-    );
+        return tx.missionOffer.update({
+          where: { id: offerId },
+          data: {
+            templateId: replacement.id,
+            championId: championId ?? null,
+            rerolledFromOfferId: offerId,
+          },
+          include: { template: true },
+        });
+      });
+
+      return mapOffer(
+        {
+          ...offer,
+          template: updated.template,
+          templateId: updated.templateId,
+          championId: updated.championId,
+        },
+        false,
+      );
+    } catch (error) {
+      if (error instanceof InsufficientBalanceError) {
+        throw new BadRequestException('Insufficient WPGG balance for reroll');
+      }
+      throw error;
+    }
   }
 }

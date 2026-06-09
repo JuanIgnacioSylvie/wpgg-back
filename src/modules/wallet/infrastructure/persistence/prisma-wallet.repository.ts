@@ -1,19 +1,23 @@
 import { Injectable } from '@nestjs/common';
-import { WpggTransactionType } from '@prisma/client';
+import { Prisma, WpggTransactionType, WpggWallet } from '@prisma/client';
+import { InsufficientBalanceError } from '@modules/wallet/domain/errors/insufficient-balance.error';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
+
+type TxClient = Prisma.TransactionClient;
 
 @Injectable()
 export class PrismaWalletRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async ensureWallet(userId: string) {
-    const existing = await this.prisma.wpggWallet.findUnique({
+  async ensureWallet(userId: string, tx?: TxClient): Promise<WpggWallet> {
+    const client = tx ?? this.prisma;
+    const existing = await client.wpggWallet.findUnique({
       where: { userId },
     });
     if (existing) {
       return existing;
     }
-    return this.prisma.wpggWallet.create({
+    return client.wpggWallet.create({
       data: { userId, balance: 0 },
     });
   }
@@ -29,21 +33,23 @@ export class PrismaWalletRepository {
     amount: number,
     referenceId: string,
     description: string,
-  ) {
-    const wallet = await this.ensureWallet(userId);
-    const existing = await this.prisma.wpggTransaction.findUnique({
-      where: {
-        walletId_referenceId: {
-          walletId: wallet.id,
-          referenceId,
+    tx?: TxClient,
+  ): Promise<WpggWallet> {
+    const run = async (client: TxClient) => {
+      const wallet = await this.ensureWallet(userId, client);
+      const existing = await client.wpggTransaction.findUnique({
+        where: {
+          walletId_referenceId: {
+            walletId: wallet.id,
+            referenceId,
+          },
         },
-      },
-    });
-    if (existing) {
-      return wallet;
-    }
-    return this.prisma.$transaction(async (tx) => {
-      await tx.wpggTransaction.create({
+      });
+      if (existing) {
+        return wallet;
+      }
+
+      await client.wpggTransaction.create({
         data: {
           walletId: wallet.id,
           type: WpggTransactionType.MISSION_REWARD,
@@ -52,11 +58,16 @@ export class PrismaWalletRepository {
           description,
         },
       });
-      return tx.wpggWallet.update({
+      return client.wpggWallet.update({
         where: { id: wallet.id },
         data: { balance: { increment: amount } },
       });
-    });
+    };
+
+    if (tx) {
+      return run(tx);
+    }
+    return this.prisma.$transaction(run);
   }
 
   async debit(
@@ -65,13 +76,36 @@ export class PrismaWalletRepository {
     type: WpggTransactionType,
     referenceId: string,
     description: string,
-  ) {
-    const wallet = await this.ensureWallet(userId);
-    if (wallet.balance < amount) {
-      throw new Error('INSUFFICIENT_BALANCE');
-    }
-    return this.prisma.$transaction(async (tx) => {
-      await tx.wpggTransaction.create({
+    tx?: TxClient,
+  ): Promise<WpggWallet> {
+    const run = async (client: TxClient) => {
+      const wallet = await this.ensureWallet(userId, client);
+
+      if (referenceId) {
+        const existing = await client.wpggTransaction.findUnique({
+          where: {
+            walletId_referenceId: {
+              walletId: wallet.id,
+              referenceId,
+            },
+          },
+        });
+        if (existing) {
+          return client.wpggWallet.findUniqueOrThrow({
+            where: { id: wallet.id },
+          });
+        }
+      }
+
+      const updated = await client.wpggWallet.updateMany({
+        where: { id: wallet.id, balance: { gte: amount } },
+        data: { balance: { decrement: amount } },
+      });
+      if (updated.count === 0) {
+        throw new InsufficientBalanceError();
+      }
+
+      await client.wpggTransaction.create({
         data: {
           walletId: wallet.id,
           type,
@@ -80,11 +114,16 @@ export class PrismaWalletRepository {
           description,
         },
       });
-      return tx.wpggWallet.update({
+
+      return client.wpggWallet.findUniqueOrThrow({
         where: { id: wallet.id },
-        data: { balance: { decrement: amount } },
       });
-    });
+    };
+
+    if (tx) {
+      return run(tx);
+    }
+    return this.prisma.$transaction(run);
   }
 
   async credit(
@@ -93,10 +132,11 @@ export class PrismaWalletRepository {
     type: WpggTransactionType,
     referenceId: string,
     description: string,
-  ) {
-    const wallet = await this.ensureWallet(userId);
-    return this.prisma.$transaction(async (tx) => {
-      await tx.wpggTransaction.create({
+    tx?: TxClient,
+  ): Promise<WpggWallet> {
+    const run = async (client: TxClient) => {
+      const wallet = await this.ensureWallet(userId, client);
+      await client.wpggTransaction.create({
         data: {
           walletId: wallet.id,
           type,
@@ -105,11 +145,16 @@ export class PrismaWalletRepository {
           description,
         },
       });
-      return tx.wpggWallet.update({
+      return client.wpggWallet.update({
         where: { id: wallet.id },
         data: { balance: { increment: amount } },
       });
-    });
+    };
+
+    if (tx) {
+      return run(tx);
+    }
+    return this.prisma.$transaction(run);
   }
 
   listTransactions(

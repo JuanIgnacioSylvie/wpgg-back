@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import {
+  WPGG_CANCEL_COST,
+  WPGG_MIN_WITHDRAW,
+  WPGG_REROLL_COST,
+} from '../domain/wpgg-economy.constants';
 import { PrismaWalletRepository } from '../infrastructure/persistence/prisma-wallet.repository';
-
-const MIN_WITHDRAW_WPGG = 1000;
 
 @Injectable()
 export class GetWalletUseCase {
@@ -15,7 +18,9 @@ export class GetWalletUseCase {
 
     return {
       balance: wallet.balance,
-      minWithdrawWpgg: MIN_WITHDRAW_WPGG,
+      minWithdrawWpgg: WPGG_MIN_WITHDRAW,
+      rerollCostWpgg: WPGG_REROLL_COST,
+      cancelCostWpgg: WPGG_CANCEL_COST,
       latestPriceUsd: latestPrice,
     };
   }

@@ -3,17 +3,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
+import { InsufficientBalanceError } from '@modules/wallet/domain/errors/insufficient-balance.error';
+import { WPGG_CANCEL_COST } from '@modules/wallet/domain/wpgg-economy.constants';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
+import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
+import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 import { UserMissionContextService } from './user-mission-context.service';
-
-const CANCEL_COST = 5;
 
 @Injectable()
 export class CancelActiveMissionUseCase {
   constructor(
     private readonly repo: PrismaMissionsRepository,
     private readonly walletRepo: PrismaWalletRepository,
+    private readonly prisma: PrismaService,
     private readonly context: UserMissionContextService,
   ) {}
 
@@ -27,22 +29,27 @@ export class CancelActiveMissionUseCase {
       throw new BadRequestException('Only active missions can be cancelled');
     }
 
-    const wallet = await this.walletRepo.ensureWallet(userId);
-    if (wallet.balance < CANCEL_COST) {
-      throw new BadRequestException(
-        'Insufficient WPGG balance to cancel mission',
-      );
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await this.walletRepo.debit(
+          userId,
+          WPGG_CANCEL_COST,
+          'MISSION_CANCEL',
+          `cancel:${missionId}`,
+          'Mission cancellation',
+          tx,
+        );
+
+        await tx.userMission.delete({ where: { id: missionId } });
+      });
+    } catch (error) {
+      if (error instanceof InsufficientBalanceError) {
+        throw new BadRequestException(
+          'Insufficient WPGG balance to cancel mission',
+        );
+      }
+      throw error;
     }
-
-    await this.walletRepo.debit(
-      userId,
-      CANCEL_COST,
-      'MISSION_CANCEL',
-      `cancel:${missionId}:${Date.now()}`,
-      'Mission cancellation',
-    );
-
-    await this.repo.deleteUserMission(missionId);
 
     return { success: true };
   }
