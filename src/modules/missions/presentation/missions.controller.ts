@@ -12,6 +12,7 @@ import { AcceptMissionOfferUseCase } from '../application/accept-mission-offer.u
 import { GetMissionsByDayUseCase } from '../application/get-missions-by-day.use-case';
 import { GetMissionsHomeUseCase } from '../application/get-missions-home.use-case';
 import { GetPickTodayUseCase } from '../application/get-pick-today.use-case';
+import { CancelActiveMissionUseCase } from '../application/cancel-active-mission.use-case';
 import { RerollMissionOfferUseCase } from '../application/reroll-mission-offer.use-case';
 import { SyncUserMatchesUseCase } from '../application/sync-user-matches.use-case';
 
@@ -24,6 +25,7 @@ export class MissionsController {
     private readonly getPickToday: GetPickTodayUseCase,
     private readonly acceptOffer: AcceptMissionOfferUseCase,
     private readonly rerollOffer: RerollMissionOfferUseCase,
+    private readonly cancelActive: CancelActiveMissionUseCase,
     private readonly syncMatches: SyncUserMatchesUseCase,
   ) {}
 
@@ -56,6 +58,14 @@ export class MissionsController {
     @Param('offerId') offerId: string,
   ) {
     return this.rerollOffer.execute(userId, offerId);
+  }
+
+  @Post('active/:missionId/cancel')
+  cancelActiveMission(
+    @CurrentUser() userId: string,
+    @Param('missionId') missionId: string,
+  ) {
+    return this.cancelActive.execute(userId, missionId);
   }
 
   @Post('sync')

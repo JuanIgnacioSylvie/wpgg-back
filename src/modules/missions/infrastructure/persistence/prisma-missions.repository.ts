@@ -178,6 +178,10 @@ export class PrismaMissionsRepository {
     });
   }
 
+  deleteUserMission(id: string) {
+    return this.prisma.userMission.delete({ where: { id } });
+  }
+
   findActiveMissionsForUser(userId: string) {
     return this.prisma.userMission.findMany({
       where: {

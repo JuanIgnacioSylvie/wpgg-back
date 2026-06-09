@@ -3,6 +3,7 @@ import { RiotModule } from '@modules/riot/presentation/riot.module';
 import { SharedModule } from '@shared/shared.module';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
 import { AcceptMissionOfferUseCase } from '../application/accept-mission-offer.use-case';
+import { CancelActiveMissionUseCase } from '../application/cancel-active-mission.use-case';
 import { GetMissionsByDayUseCase } from '../application/get-missions-by-day.use-case';
 import { GetMissionsHomeUseCase } from '../application/get-missions-home.use-case';
 import { GetPickTodayUseCase } from '../application/get-pick-today.use-case';
@@ -25,6 +26,7 @@ import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-m
     GetPickTodayUseCase,
     AcceptMissionOfferUseCase,
     RerollMissionOfferUseCase,
+    CancelActiveMissionUseCase,
   ],
   exports: [
     PrismaMissionsRepository,
@@ -35,6 +37,7 @@ import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-m
     GetPickTodayUseCase,
     AcceptMissionOfferUseCase,
     RerollMissionOfferUseCase,
+    CancelActiveMissionUseCase,
   ],
 })
 export class MissionsCoreModule {}
