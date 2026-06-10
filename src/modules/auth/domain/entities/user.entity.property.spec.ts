@@ -16,7 +16,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Helper: build a UserEntity with the given string as its email field */
 function entityWithEmail(email: string): UserEntity {
-  return new UserEntity('test-id', email, 'hash', new Date(), new Date());
+  return new UserEntity('test-id', email, 'hash', null, new Date(), new Date());
 }
 
 describe('UserEntity.isValidEmail() — Property 12', () => {

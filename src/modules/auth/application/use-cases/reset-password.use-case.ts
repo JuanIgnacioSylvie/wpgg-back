@@ -60,6 +60,7 @@ export class ResetPasswordUseCase {
       user.id,
       user.email,
       passwordHash,
+      user.emailVerifiedAt,
       user.createdAt,
       new Date(),
     );

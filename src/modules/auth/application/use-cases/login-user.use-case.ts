@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -22,6 +23,7 @@ import {
   IUserRepository,
   USER_REPOSITORY,
 } from '../../domain/repositories/user.repository.interface';
+import { isRsoPlaceholderEmail } from '../../domain/rso-placeholder-email';
 
 export type LoginUserInput = {
   email: string;
@@ -60,6 +62,12 @@ export class LoginUserUseCase {
     );
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!isRsoPlaceholderEmail(user.email) && !user.isEmailVerified()) {
+      throw new ForbiddenException(
+        'Email not verified. Check your inbox for the confirmation link.',
+      );
     }
 
     try {

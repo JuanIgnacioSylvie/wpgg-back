@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -25,20 +26,41 @@ import { LogoutUserUseCase } from '../application/use-cases/logout-user.use-case
 import { RefreshTokenUseCase } from '../application/use-cases/refresh-token.use-case';
 import { RequestPasswordResetUseCase } from '../application/use-cases/request-password-reset.use-case';
 import { ResetPasswordUseCase } from '../application/use-cases/reset-password.use-case';
-import { ApplyRiotPendingLinkUseCase } from '@modules/riot/application/use-cases/apply-riot-pending-link.use-case';
+import { ResendEmailVerificationUseCase } from '../application/use-cases/resend-email-verification.use-case';
+import { VerifyEmailUseCase } from '../application/use-cases/verify-email.use-case';
 import { RegisterUserUseCase } from '../application/use-cases/register-user.use-case';
 import { LoginRequestDto } from './dto/login-request.dto';
 import { ForgotPasswordRequestDto } from './dto/forgot-password-request.dto';
 import { ResetPasswordRequestDto } from './dto/reset-password-request.dto';
 import { RefreshRequestDto } from './dto/refresh-request.dto';
 import { RegisterRequestDto } from './dto/register-request.dto';
+import {
+  ResendEmailVerificationRequestDto,
+  VerifyEmailRequestDto,
+} from './dto/email-verification-request.dto';
 import { RiotSessionExchangeRequestDto } from './dto/riot-session-exchange-request.dto';
+
+function clientPlatformFromHeaders(
+  platformHeader?: string,
+): string | undefined {
+  const p = platformHeader?.trim().toLowerCase();
+  return p === 'web' || p === 'mobile' ? p : undefined;
+}
+
+function remoteIpFromRequest(req: Request): string | undefined {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.trim()) {
+    return forwarded.split(',')[0]?.trim();
+  }
+  return req.ip;
+}
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly registerUser: RegisterUserUseCase,
-    private readonly applyRiotPendingLink: ApplyRiotPendingLinkUseCase,
+    private readonly verifyEmail: VerifyEmailUseCase,
+    private readonly resendEmailVerification: ResendEmailVerificationUseCase,
     private readonly loginUser: LoginUserUseCase,
     private readonly refreshToken: RefreshTokenUseCase,
     private readonly logoutUser: LogoutUserUseCase,
@@ -49,28 +71,59 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async register(
     @Body() body: RegisterRequestDto,
+    @Headers('x-wpgg-platform') platformHeader: string | undefined,
+    @Req() req: Request,
+  ) {
+    const { riotLinkPendingCode, turnstileToken, ...registerBody } = body;
+    const out = await this.registerUser.execute({
+      ...registerBody,
+      turnstileToken,
+      clientPlatform: clientPlatformFromHeaders(platformHeader),
+      remoteIp: remoteIpFromRequest(req),
+      riotLinkPendingCode,
+    });
+    return { ok: true, email: out.email };
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  async verifyEmailRoute(
+    @Body() body: VerifyEmailRequestDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { riotLinkPendingCode, ...registerBody } = body;
-    const out = await this.registerUser.execute(registerBody);
-    if (riotLinkPendingCode?.trim()) {
-      await this.applyRiotPendingLink.execute({
-        userId: out.userId,
-        riotLinkPendingCode,
-      });
-    }
+    const out = await this.verifyEmail.execute({ token: body.token });
     attachSessionCookies(res, this.configService, {
       accessToken: out.accessToken,
       refreshToken: out.refreshToken,
-      rememberMe: false,
+      rememberMe: out.rememberMe,
     });
     return { accessToken: out.accessToken, refreshToken: out.refreshToken };
   }
 
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async resendVerification(
+    @Body() body: ResendEmailVerificationRequestDto,
+    @Headers('x-wpgg-platform') platformHeader: string | undefined,
+    @Req() req: Request,
+  ) {
+    await this.resendEmailVerification.execute({
+      email: body.email,
+      turnstileToken: body.turnstileToken,
+      clientPlatform: clientPlatformFromHeaders(platformHeader),
+      remoteIp: remoteIpFromRequest(req),
+    });
+    return { ok: true };
+  }
+
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async login(
     @Body() body: LoginRequestDto,
     @Res({ passthrough: true }) res: Response,

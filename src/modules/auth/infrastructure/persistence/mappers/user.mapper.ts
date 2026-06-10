@@ -7,16 +7,26 @@ export class UserMapper {
       row.id,
       row.email,
       row.passwordHash,
+      row.emailVerifiedAt,
       row.createdAt,
       row.updatedAt,
     );
   }
 
-  static toPrisma(entity: UserEntity): Omit<PrismaUser, 'riotAccount' | 'refreshTokens'> {
+  static toPrisma(
+    entity: UserEntity,
+  ): Omit<
+    PrismaUser,
+    | 'riotAccount'
+    | 'refreshTokens'
+    | 'passwordResetTokens'
+    | 'emailVerificationTokens'
+  > {
     return {
       id: entity.id,
       email: entity.email,
       passwordHash: entity.passwordHash,
+      emailVerifiedAt: entity.emailVerifiedAt,
       timezone: null,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,

@@ -1,9 +1,7 @@
-import { createHash, randomBytes, randomUUID } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import {
-  ConflictException,
   Inject,
   Injectable,
-  InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -11,11 +9,7 @@ import {
   EMAIL_PROVIDER,
   IEmailProvider,
 } from '../../domain/providers/email.provider.interface';
-import { UserEntity } from '../../domain/entities/user.entity';
-import {
-  HASH_PROVIDER,
-  IHashProvider,
-} from '../../domain/providers/hash.provider.interface';
+import { isRsoPlaceholderEmail } from '../../domain/rso-placeholder-email';
 import {
   EMAIL_VERIFICATION_TOKEN_REPOSITORY,
   IEmailVerificationTokenRepository,
@@ -26,22 +20,16 @@ import {
 } from '../../domain/repositories/user.repository.interface';
 import { TurnstileGuardService } from '../services/turnstile-guard.service';
 
-export type RegisterUserInput = {
+export type ResendEmailVerificationInput = {
   email: string;
-  password: string;
   turnstileToken?: string;
   clientPlatform?: string;
   remoteIp?: string;
-  riotLinkPendingCode?: string;
-};
-
-export type RegisterUserOutput = {
-  email: string;
 };
 
 @Injectable()
-export class RegisterUserUseCase {
-  private readonly logger = new Logger(RegisterUserUseCase.name);
+export class ResendEmailVerificationUseCase {
+  private readonly logger = new Logger(ResendEmailVerificationUseCase.name);
 
   constructor(
     private readonly config: ConfigService,
@@ -50,13 +38,11 @@ export class RegisterUserUseCase {
     private readonly userRepository: IUserRepository,
     @Inject(EMAIL_VERIFICATION_TOKEN_REPOSITORY)
     private readonly verificationTokens: IEmailVerificationTokenRepository,
-    @Inject(HASH_PROVIDER)
-    private readonly hashProvider: IHashProvider,
     @Inject(EMAIL_PROVIDER)
     private readonly emailProvider: IEmailProvider,
   ) {}
 
-  async execute(input: RegisterUserInput): Promise<RegisterUserOutput> {
+  async execute(input: ResendEmailVerificationInput): Promise<void> {
     await this.turnstileGuard.assertForWebClient(
       input.turnstileToken,
       input.clientPlatform,
@@ -64,46 +50,22 @@ export class RegisterUserUseCase {
     );
 
     const email = input.email.trim().toLowerCase();
-    const emailExists = await this.userRepository.existsByEmail(email);
-    if (emailExists) {
-      throw new ConflictException('Email already registered');
+    const user = await this.userRepository.findByEmail(email);
+    if (
+      !user ||
+      isRsoPlaceholderEmail(user.email) ||
+      user.isEmailVerified()
+    ) {
+      return;
     }
 
-    const passwordHash = await this.hashProvider.hash(input.password);
-    const userId = randomUUID();
-    const user = UserEntity.create({
-      id: userId,
-      email,
-      passwordHash,
-      emailVerifiedAt: null,
-    });
-
-    let savedUser: UserEntity;
-    try {
-      savedUser = await this.userRepository.save(user);
-    } catch {
-      throw new InternalServerErrorException();
-    }
-
-    await this.sendVerificationEmail(
-      savedUser,
-      input.riotLinkPendingCode?.trim() || undefined,
-    );
-
-    return { email: savedUser.email };
-  }
-
-  private async sendVerificationEmail(
-    user: UserEntity,
-    riotLinkPendingCode?: string,
-  ): Promise<void> {
     const verifyBaseUrl = this.config
       .get<string>('EMAIL_VERIFICATION_URL')
       ?.trim()
       ?.replace(/\/+$/, '');
     if (!verifyBaseUrl) {
       this.logger.warn(
-        'Registration completed but EMAIL_VERIFICATION_URL is not configured',
+        'Resend verification requested but EMAIL_VERIFICATION_URL is not configured',
       );
       return;
     }
@@ -123,7 +85,6 @@ export class RegisterUserUseCase {
     await this.verificationTokens.create({
       codeHash,
       userId: user.id,
-      riotLinkPendingCode,
       expiresAt,
     });
 
@@ -135,7 +96,7 @@ export class RegisterUserUseCase {
       });
     } catch (err) {
       this.logger.error(
-        `Failed to send verification email to ${user.email}`,
+        `Failed to resend verification email to ${user.email}`,
         err instanceof Error ? err.stack : String(err),
       );
     }

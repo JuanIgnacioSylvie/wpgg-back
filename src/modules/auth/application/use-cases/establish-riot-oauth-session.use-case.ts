@@ -132,6 +132,7 @@ export class EstablishRiotOauthSessionUseCase {
         id: userId,
         email,
         passwordHash,
+        emailVerifiedAt: new Date(),
       });
       try {
         user = await this.userRepository.save(created);

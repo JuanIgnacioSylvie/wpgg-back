@@ -191,6 +191,23 @@ class EnvironmentVariables {
   @Max(86400)
   PASSWORD_RESET_TOKEN_TTL_SEC?: number;
 
+  /** Cloudflare Turnstile secret for server-side captcha verification. */
+  @IsOptional()
+  @IsString()
+  TURNSTILE_SECRET_KEY?: string;
+
+  /** SPA route base for email verification links, e.g. `https://wpgg.lol/verify-email`. */
+  @IsOptional()
+  @IsString()
+  EMAIL_VERIFICATION_URL?: string;
+
+  /** Email verification token TTL in seconds (default 86400, min 300, max 86400). */
+  @IsOptional()
+  @IsInt()
+  @Min(300)
+  @Max(86400)
+  EMAIL_VERIFICATION_TOKEN_TTL_SEC?: number;
+
   /** Polygon Mainnet JSON-RPC endpoint. */
   @IsString()
   @IsNotEmpty({ message: 'POLYGON_RPC_URL is required' })

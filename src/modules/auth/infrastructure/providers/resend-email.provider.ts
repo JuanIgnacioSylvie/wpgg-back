@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import {
   IEmailProvider,
+  SendEmailVerificationInput,
   SendPasswordResetEmailInput,
 } from '../../domain/providers/email.provider.interface';
 
@@ -30,6 +31,43 @@ export class ResendEmailProvider implements IEmailProvider {
       <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta WPGG.</p>
       <p><a href="${input.resetUrl}">Restablecer contraseña</a></p>
       <p>Si no pediste este cambio, podés ignorar este correo.</p>
+      <p>El enlace expira en breve por seguridad.</p>
+    `.trim();
+
+    await axios.post(
+      'https://api.resend.com/emails',
+      {
+        from,
+        to: [input.to],
+        subject,
+        html,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 15_000,
+      },
+    );
+  }
+
+  async sendEmailVerification(input: SendEmailVerificationInput): Promise<void> {
+    const apiKey = this.config.get<string>('RESEND_API_KEY')?.trim();
+    const from = this.config.get<string>('EMAIL_FROM')?.trim();
+    if (!apiKey || !from) {
+      this.logger.warn(
+        'Verification email skipped: RESEND_API_KEY or EMAIL_FROM not configured',
+      );
+      return;
+    }
+
+    const subject = 'Confirmá tu email en WPGG';
+    const html = `
+      <p>Hola,</p>
+      <p>Gracias por registrarte en WPGG. Confirmá tu correo para activar tu cuenta.</p>
+      <p><a href="${input.verifyUrl}">Confirmar email</a></p>
+      <p>Si no creaste esta cuenta, podés ignorar este correo.</p>
       <p>El enlace expira en breve por seguridad.</p>
     `.trim();
 

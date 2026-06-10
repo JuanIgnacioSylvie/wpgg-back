@@ -25,6 +25,7 @@ export class PrismaUserRepository implements IUserRepository {
       update: {
         email: user.email,
         passwordHash: user.passwordHash,
+        emailVerifiedAt: user.emailVerifiedAt,
         updatedAt: user.updatedAt,
       },
     });

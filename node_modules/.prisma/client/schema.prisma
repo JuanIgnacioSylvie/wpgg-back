@@ -67,18 +67,34 @@ model User {
   id                       String                    @id @default(uuid())
   email                    String                    @unique
   passwordHash             String
+  emailVerifiedAt          DateTime?
   timezone                 String?
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   riotAccount              RiotAccount?
   refreshTokens            RefreshToken[]
   passwordResetTokens      PasswordResetToken[]
+  emailVerificationTokens  EmailVerificationToken[]
   riotSessionExchangeCodes RiotSessionExchangeCode[]
   wpggWallet               WpggWallet?
   missionDays              MissionDay[]
   processedMatches         ProcessedMatch[]
   withdrawals              Withdrawal[]
   storeOrders              StoreOrder[]
+}
+
+model EmailVerificationToken {
+  id                  String    @id @default(uuid())
+  codeHash            String    @unique
+  userId              String
+  riotLinkPendingCode String?
+  expiresAt           DateTime
+  usedAt              DateTime?
+  createdAt           DateTime  @default(now())
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
 }
 
 model RiotAccount {
