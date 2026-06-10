@@ -196,6 +196,11 @@ class EnvironmentVariables {
   @IsString()
   TURNSTILE_SECRET_KEY?: string;
 
+  /** Cloudflare Turnstile site key (public), exposed to web clients when captcha is enabled. */
+  @IsOptional()
+  @IsString()
+  TURNSTILE_SITE_KEY?: string;
+
   /** SPA route base for email verification links, e.g. `https://wpgg.lol/verify-email`. */
   @IsOptional()
   @IsString()
