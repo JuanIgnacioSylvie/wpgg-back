@@ -5,6 +5,7 @@ import {
   countMissionTemplates,
   seedMarketPricesIfEmpty,
   upsertMissionTemplates,
+  upsertWelcomeMissionTemplate,
 } from './mission-template.seed';
 
 @Injectable()
@@ -21,6 +22,7 @@ export class MissionTemplateBootstrapService implements OnModuleInit {
         `Mission templates bootstrapped (${MISSION_TEMPLATE_SEEDS.length} definitions)`,
       );
     }
+    await upsertWelcomeMissionTemplate(this.prisma);
     await seedMarketPricesIfEmpty(this.prisma);
   }
 }

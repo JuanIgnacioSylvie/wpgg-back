@@ -34,8 +34,10 @@ export class GetPickTodayUseCase {
         .map((m) => m.offerId as string),
     );
 
-    const selectedCount = (refreshed?.userMissions ?? []).filter((m) =>
-      ['ACTIVE', 'COMPLETED'].includes(m.status),
+    const selectedCount = (refreshed?.userMissions ?? []).filter(
+      (m) =>
+        ['ACTIVE', 'COMPLETED'].includes(m.status) &&
+        m.template.kind === 'STANDARD',
     ).length;
 
     const offers = (refreshed?.offers ?? []).map((o) =>

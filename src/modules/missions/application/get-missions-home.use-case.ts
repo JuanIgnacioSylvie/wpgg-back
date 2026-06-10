@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import {
+  isStandardMission,
   mapUserMission,
   pickPrimaryMission,
   pickSecondaryMissions,
 } from './mission-response.mapper';
+import { WelcomeMissionService } from './welcome-mission.service';
 import { MissionOfferGeneratorService } from './mission-offer-generator.service';
 import {
   MissionDayWithRelations,
@@ -24,6 +26,7 @@ export class GetMissionsHomeUseCase {
     private readonly context: UserMissionContextService,
     private readonly offerGen: MissionOfferGeneratorService,
     private readonly sync: SyncUserMatchesUseCase,
+    private readonly welcomeMission: WelcomeMissionService,
   ) {}
 
   async execute(userId: string) {
@@ -32,6 +35,7 @@ export class GetMissionsHomeUseCase {
 
     const day = await this.repo.getOrCreateMissionDay(userId, today);
     await this.offerGen.ensureDailyOffers(day.id);
+    await this.welcomeMission.ensureForUser(userId, day.id);
 
     await this.sync.execute(userId);
 
@@ -46,8 +50,15 @@ export class GetMissionsHomeUseCase {
       return mapUserMission(m, offer);
     });
 
-    const primary = pickPrimaryMission(activeCards);
-    const secondary = pickSecondaryMissions(activeCards, primary);
+    const welcomeMission = await this.repo.findWelcomeMissionForUser(userId);
+    const welcome =
+      welcomeMission?.status === 'ACTIVE'
+        ? mapUserMission(welcomeMission, welcomeMission.offer)
+        : null;
+
+    const standardActive = activeCards.filter(isStandardMission);
+    const primary = pickPrimaryMission(standardActive);
+    const secondary = pickSecondaryMissions(standardActive, primary);
 
     const past = await this.repo.findPastMissions(userId, 30);
     const pastCards = past.map((m) => mapUserMission(m));
@@ -57,6 +68,7 @@ export class GetMissionsHomeUseCase {
     return {
       missionDayTimezone: WPGG_MISSION_TIMEZONE,
       missionDate: missionCalendarDateString(),
+      welcome,
       primary: primary
         ? { ...primary, endsAt: new Date(Date.now() + endsInMs).toISOString() }
         : null,

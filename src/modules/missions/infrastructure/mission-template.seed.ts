@@ -1,13 +1,18 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import { MISSION_TEMPLATE_SEEDS } from './data/mission-templates.data';
+import { WELCOME_MISSION_TEMPLATE } from './data/welcome-mission-template.data';
 
 type PrismaLike = PrismaService | PrismaClient;
 
 export async function upsertMissionTemplates(db: PrismaLike): Promise<void> {
   for (const t of MISSION_TEMPLATE_SEEDS) {
     const existing = await db.missionTemplate.findFirst({
-      where: { ruleType: t.ruleType, difficulty: t.difficulty },
+      where: {
+        ruleType: t.ruleType,
+        difficulty: t.difficulty,
+        kind: t.kind ?? 'STANDARD',
+      },
     });
     if (existing) {
       await db.missionTemplate.update({
@@ -21,8 +26,38 @@ export async function upsertMissionTemplates(db: PrismaLike): Promise<void> {
         },
       });
     } else {
-      await db.missionTemplate.create({ data: t });
+      await db.missionTemplate.create({
+        data: { ...t, kind: t.kind ?? 'STANDARD' },
+      });
     }
+  }
+}
+
+export async function upsertWelcomeMissionTemplate(
+  db: PrismaLike,
+): Promise<void> {
+  const t = WELCOME_MISSION_TEMPLATE;
+  const existing = await db.missionTemplate.findFirst({
+    where: { kind: 'WELCOME' },
+  });
+  if (existing) {
+    await db.missionTemplate.update({
+      where: { id: existing.id },
+      data: {
+        titleEs: t.titleEs,
+        titleEn: t.titleEn,
+        subtitleEs: t.subtitleEs,
+        subtitleEn: t.subtitleEn,
+        targetJson: t.targetJson,
+        rewardWpgg: t.rewardWpgg,
+        sortOrder: t.sortOrder,
+        ruleType: t.ruleType,
+      },
+    });
+  } else {
+    await db.missionTemplate.create({
+      data: { ...t, kind: 'WELCOME' },
+    });
   }
 }
 

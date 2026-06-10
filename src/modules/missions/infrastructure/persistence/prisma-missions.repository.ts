@@ -28,7 +28,7 @@ export class PrismaMissionsRepository {
 
   findTemplatesByDifficulty(difficulty: MissionDifficulty) {
     return this.prisma.missionTemplate.findMany({
-      where: { difficulty },
+      where: { difficulty, kind: 'STANDARD' },
       orderBy: { sortOrder: 'asc' },
     });
   }
@@ -137,6 +137,7 @@ export class PrismaMissionsRepository {
       where: {
         missionDayId,
         status: { in: ['ACTIVE', 'COMPLETED'] },
+        template: { kind: 'STANDARD' },
       },
     });
   }
@@ -146,7 +147,38 @@ export class PrismaMissionsRepository {
       where: {
         missionDayId,
         status: { in: ['ACTIVE', 'COMPLETED'] },
-        template: { difficulty: 'HARD' },
+        template: { difficulty: 'HARD', kind: 'STANDARD' },
+      },
+    });
+  }
+
+  findWelcomeTemplate() {
+    return this.prisma.missionTemplate.findFirst({
+      where: { kind: 'WELCOME' },
+    });
+  }
+
+  findWelcomeMissionForUser(userId: string) {
+    return this.prisma.userMission.findFirst({
+      where: {
+        missionDay: { userId },
+        template: { kind: 'WELCOME' },
+      },
+      include: { template: true, missionDay: true, offer: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  countRegisteredPuuids(puuids: string[]) {
+    if (puuids.length === 0) {
+      return Promise.resolve(0);
+    }
+    const normalized = [...new Set(puuids.map((p) => p.toLowerCase()))];
+    return this.prisma.riotAccount.count({
+      where: {
+        OR: normalized.map((puuid) => ({
+          puuid: { equals: puuid, mode: 'insensitive' as const },
+        })),
       },
     });
   }
@@ -154,7 +186,7 @@ export class PrismaMissionsRepository {
   createUserMission(data: {
     missionDayId: string;
     templateId: string;
-    offerId: string;
+    offerId?: string | null;
     status: UserMissionStatus;
     championId?: number;
   }) {
@@ -162,7 +194,7 @@ export class PrismaMissionsRepository {
       data: {
         missionDayId: data.missionDayId,
         templateId: data.templateId,
-        offerId: data.offerId,
+        offerId: data.offerId ?? null,
         status: data.status,
         progressJson: {},
         acceptedAt: data.status === 'ACTIVE' ? new Date() : undefined,
@@ -228,6 +260,7 @@ export class PrismaMissionsRepository {
       where: {
         status: 'ACTIVE',
         missionDay: { calendarDate: { lt: beforeDate } },
+        template: { kind: 'STANDARD' },
       },
       data: { status: 'EXPIRED' },
     });

@@ -1,14 +1,18 @@
 import {
   MissionDifficulty,
   MissionRuleType,
+  MissionTemplateKind,
   Prisma,
 } from '@prisma/client';
 
 export type MissionTemplateSeed = {
+  kind?: MissionTemplateKind;
   difficulty: MissionDifficulty;
   ruleType: MissionRuleType;
   titleEs: string;
   titleEn: string;
+  subtitleEs?: string;
+  subtitleEn?: string;
   targetJson: Prisma.InputJsonValue;
   rewardWpgg: number;
   sortOrder: number;

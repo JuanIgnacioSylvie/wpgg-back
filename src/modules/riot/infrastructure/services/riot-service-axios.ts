@@ -214,6 +214,7 @@ export class RiotServiceAxios implements IRiotService {
         gameEndTimestamp?: number;
         participants: Array<{
           puuid: string;
+          teamId: number;
           championId: number;
           championName: string;
           kills: number;
@@ -248,6 +249,7 @@ export class RiotServiceAxios implements IRiotService {
       gameEndTimestamp,
       participants: info.participants.map((p) => ({
         puuid: p.puuid,
+        teamId: p.teamId ?? 0,
         championId: p.championId ?? 0,
         championName: p.championName,
         kills: p.kills,

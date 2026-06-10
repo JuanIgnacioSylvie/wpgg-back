@@ -2,6 +2,7 @@ import {
   MissionDifficulty,
   MissionOffer,
   MissionTemplate,
+  MissionTemplateKind,
   UserMission,
   UserMissionStatus,
 } from '@prisma/client';
@@ -9,9 +10,12 @@ import {
 export interface MissionCardDto {
   id: string;
   offerId?: string;
+  kind: MissionTemplateKind;
   difficulty: MissionDifficulty;
   titleEs: string;
   titleEn: string;
+  subtitleEs?: string | null;
+  subtitleEn?: string | null;
   rewardWpgg: number;
   status: UserMissionStatus;
   progressPercent: number;
@@ -36,9 +40,12 @@ export function mapUserMission(
   return {
     id: um.id,
     offerId: um.offerId ?? offer?.id,
+    kind: um.template.kind,
     difficulty: um.template.difficulty,
     titleEs: um.template.titleEs,
     titleEn: um.template.titleEn,
+    subtitleEs: um.template.subtitleEs,
+    subtitleEn: um.template.subtitleEn,
     rewardWpgg: um.template.rewardWpgg,
     status: um.status,
     progressPercent: um.progressPercent,
@@ -53,14 +60,21 @@ export function mapOffer(
   return {
     id: offer.id,
     offerId: offer.id,
+    kind: offer.template.kind,
     difficulty: offer.template.difficulty,
     titleEs: offer.template.titleEs,
     titleEn: offer.template.titleEn,
+    subtitleEs: offer.template.subtitleEs,
+    subtitleEn: offer.template.subtitleEn,
     rewardWpgg: offer.template.rewardWpgg,
     status: accepted ? 'ACTIVE' : 'OFFER',
     progressPercent: 0,
     championId: offer.championId,
   };
+}
+
+export function isStandardMission(card: MissionCardDto): boolean {
+  return card.kind === 'STANDARD';
 }
 
 export function pickPrimaryMission(

@@ -19,6 +19,7 @@ export interface SummonerDto {
 
 export interface MatchParticipantDto {
   puuid: string;
+  teamId: number;
   championId: number;
   championName: string;
   kills: number;
@@ -75,6 +76,9 @@ export interface IRiotService {
 
 /** Summoner's Rift ranked / draft queues eligible for daily missions. */
 export const MISSION_ELIGIBLE_QUEUE_IDS = new Set([400, 420, 440]);
+
+/** Ranked Flex 5v5. */
+export const RANKED_FLEX_QUEUE_ID = 440;
 
 export function isMissionEligibleMatch(m: MatchDto): boolean {
   return (

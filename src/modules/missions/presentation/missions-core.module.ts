@@ -11,6 +11,7 @@ import { MissionOfferGeneratorService } from '../application/mission-offer-gener
 import { RerollMissionOfferUseCase } from '../application/reroll-mission-offer.use-case';
 import { SyncUserMatchesUseCase } from '../application/sync-user-matches.use-case';
 import { UserMissionContextService } from '../application/user-mission-context.service';
+import { WelcomeMissionService } from '../application/welcome-mission.service';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 
 @Module({
@@ -27,6 +28,7 @@ import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-m
     AcceptMissionOfferUseCase,
     RerollMissionOfferUseCase,
     CancelActiveMissionUseCase,
+    WelcomeMissionService,
   ],
   exports: [
     PrismaMissionsRepository,

@@ -19,6 +19,7 @@ export interface MissionTemplateTarget {
   streakPerRole?: number;
   combinedMin?: number;
   damageTakenMin?: number;
+  teammatesRequired?: number;
 }
 
 export interface RuleEvaluationContext {
@@ -68,6 +69,8 @@ export function initialProgress(
       };
     case 'SINGLE_GAME_HEAL_DAMAGE':
       return { bestCombined: 0 };
+    case 'FLEX_SQUAD_WPGG_WIN':
+      return { wpggTeammates: 0 };
     default:
       return {};
   }
@@ -256,6 +259,11 @@ export function progressPercentFromState(
     case 'SINGLE_GAME_HEAL_DAMAGE': {
       const best = (progress.bestCombined as number) ?? 0;
       return clampPercent((best / (t.combinedMin ?? 1)) * 100);
+    }
+    case 'FLEX_SQUAD_WPGG_WIN': {
+      const count = (progress.wpggTeammates as number) ?? 0;
+      const need = t.teammatesRequired ?? 4;
+      return clampPercent((count / need) * 100);
     }
     default:
       return 0;

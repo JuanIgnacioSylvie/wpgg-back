@@ -28,6 +28,12 @@ enum MissionRuleType {
   WIN_STREAK_EACH_ROLE_NO_DEATH
   SINGLE_GAME_HEAL_DAMAGE
   GAMES_DAMAGE_TAKEN_WINS
+  FLEX_SQUAD_WPGG_WIN
+}
+
+enum MissionTemplateKind {
+  STANDARD
+  WELCOME
 }
 
 enum UserMissionStatus {
@@ -132,10 +138,13 @@ model RiotPendingLinkExchangeCode {
 
 model MissionTemplate {
   id          String            @id @default(uuid())
+  kind        MissionTemplateKind @default(STANDARD)
   difficulty  MissionDifficulty
   ruleType    MissionRuleType
   titleEs     String
   titleEn     String
+  subtitleEs  String?
+  subtitleEn  String?
   targetJson  Json
   rewardWpgg  Int
   sortOrder   Int               @default(0)
@@ -143,6 +152,7 @@ model MissionTemplate {
   userMissions UserMission[]
 
   @@index([difficulty])
+  @@index([kind])
 }
 
 model MissionDay {

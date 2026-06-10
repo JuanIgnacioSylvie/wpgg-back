@@ -28,6 +28,9 @@ export class CancelActiveMissionUseCase {
     if (mission.status !== 'ACTIVE') {
       throw new BadRequestException('Only active missions can be cancelled');
     }
+    if (mission.template.kind === 'WELCOME') {
+      throw new BadRequestException('Welcome missions cannot be cancelled');
+    }
 
     try {
       await this.prisma.$transaction(async (tx) => {
