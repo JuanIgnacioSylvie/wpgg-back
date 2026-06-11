@@ -17,6 +17,11 @@ import { PrismaPushDeviceRepository } from '../infrastructure/persistence/prisma
     UnregisterPushDeviceUseCase,
     SendTestPushUseCase,
   ],
-  exports: [PushNotificationService],
+  exports: [
+    PushNotificationService,
+    RegisterPushDeviceUseCase,
+    UnregisterPushDeviceUseCase,
+    SendTestPushUseCase,
+  ],
 })
 export class NotificationsCoreModule {}
