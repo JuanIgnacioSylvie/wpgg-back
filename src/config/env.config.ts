@@ -295,6 +295,11 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   FIREBASE_PRIVATE_KEY?: string;
+
+  /** Full Firebase service account JSON (recommended on Railway). */
+  @IsOptional()
+  @IsString()
+  FIREBASE_SERVICE_ACCOUNT_JSON?: string;
 }
 
 function applyWorkerUnusedDefaults(

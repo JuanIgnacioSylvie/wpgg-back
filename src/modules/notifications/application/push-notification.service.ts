@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { PrismaPushDeviceRepository } from '../infrastructure/persistence/prisma-push-device.repository';
+import { parseFirebaseServiceAccount } from '../infrastructure/firebase-credential.util';
 
 export type PushPayload = {
   title: string;
@@ -24,33 +25,29 @@ export class PushNotificationService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    const projectId = this.config.get<string>('FIREBASE_PROJECT_ID')?.trim();
-    const clientEmail = this.config
-      .get<string>('FIREBASE_CLIENT_EMAIL')
-      ?.trim();
-    const privateKey = this.config
-      .get<string>('FIREBASE_PRIVATE_KEY')
-      ?.replace(/\\n/g, '\n')
-      .trim();
-
-    if (!projectId || !clientEmail || !privateKey) {
+    const serviceAccount = parseFirebaseServiceAccount(this.config);
+    if (!serviceAccount) {
       this.logger.warn(
-        'Push notifications disabled: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, or FIREBASE_PRIVATE_KEY not configured',
+        'Push notifications disabled: set FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY',
       );
       return;
     }
 
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId,
-          clientEmail,
-          privateKey,
-        }),
-      });
+    try {
+      if (!admin.apps.length) {
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount),
+        });
+      }
+      this.messaging = admin.messaging();
+      this.logger.log(
+        `Firebase push initialized for project ${serviceAccount.projectId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Firebase push init failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
-
-    this.messaging = admin.messaging();
   }
 
   async registerDevice(
@@ -67,53 +64,61 @@ export class PushNotificationService implements OnModuleInit {
 
   async sendToUser(userId: string, payload: PushPayload): Promise<void> {
     if (!this.messaging) {
-      return;
+      throw new Error('Push notifications are not configured on the server');
     }
 
     const tokens = await this.devices.findEnabledTokensForUser(userId);
     if (tokens.length === 0) {
-      return;
+      throw new Error('No registered push devices for this user');
     }
 
-    const webLink = payload.route
-      ? `https://wpgg.lol${payload.route.startsWith('/') ? payload.route : `/${payload.route}`}`
+    const route = payload.route;
+    const webLink = route
+      ? `https://wpgg.lol${route.startsWith('/') ? route : `/${route}`}`
       : 'https://wpgg.lol/home';
 
-    const response = await this.messaging.sendEachForMulticast({
-      tokens,
-      notification: {
-        title: payload.title,
-        body: payload.body,
-      },
-      data: payload.route ? { route: payload.route } : {},
-      webpush: {
-        fcmOptions: { link: webLink },
+    try {
+      const response = await this.messaging.sendEachForMulticast({
+        tokens,
         notification: {
-          icon: 'https://wpgg.lol/icons/Icon-192.png',
+          title: payload.title,
+          body: payload.body,
         },
-      },
-    });
+        data: route ? { route } : {},
+        webpush: {
+          fcmOptions: { link: webLink },
+          notification: {
+            icon: 'https://wpgg.lol/icons/Icon-192.png',
+          },
+        },
+      });
 
-    const invalidTokens: string[] = [];
-    response.responses.forEach((result, index) => {
-      if (result.success) {
-        return;
-      }
-      const code = result.error?.code;
-      if (
-        code === 'messaging/invalid-registration-token' ||
-        code === 'messaging/registration-token-not-registered'
-      ) {
-        invalidTokens.push(tokens[index]!);
-      } else {
-        this.logger.warn(
-          `FCM send failed for user ${userId}: ${result.error?.message ?? 'unknown'}`,
-        );
-      }
-    });
+      const invalidTokens: string[] = [];
+      response.responses.forEach((result, index) => {
+        if (result.success) {
+          return;
+        }
+        const code = result.error?.code;
+        if (
+          code === 'messaging/invalid-registration-token' ||
+          code === 'messaging/registration-token-not-registered'
+        ) {
+          invalidTokens.push(tokens[index]!);
+        } else {
+          this.logger.warn(
+            `FCM send failed for user ${userId}: ${result.error?.message ?? 'unknown'}`,
+          );
+        }
+      });
 
-    if (invalidTokens.length > 0) {
-      await this.devices.deleteByTokens(invalidTokens);
+      if (invalidTokens.length > 0) {
+        await this.devices.deleteByTokens(invalidTokens);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : JSON.stringify(error);
+      this.logger.error(`FCM send error for user ${userId}: ${message}`);
+      throw error;
     }
   }
 
