@@ -1,8 +1,8 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import {
-  seedStoreKeysIfEmpty,
   STORE_PRODUCT_SEED,
+  upsertStoreProductKeys,
   upsertStoreProducts,
 } from './store-product.seed';
 
@@ -14,7 +14,7 @@ export class StoreProductBootstrapService implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     await upsertStoreProducts(this.prisma);
-    await seedStoreKeysIfEmpty(this.prisma);
+    await upsertStoreProductKeys(this.prisma);
     this.logger.log(
       `Store catalog bootstrapped (${STORE_PRODUCT_SEED.length} products)`,
     );

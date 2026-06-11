@@ -19,9 +19,26 @@ export const STORE_PRODUCT_SEED = [
   },
 ] as const;
 
-const DEV_KEYS_PER_PRODUCT = 5;
+export const STORE_PRODUCT_KEYS: Record<string, readonly string[]> = {
+  'lol-gift-card-100rp': [
+    'RA-F2G4SATX22US65VS',
+    'RA-BXHE9U6XXN9ZYHFF',
+    'RA-2J9DUTCYMU74NSPQ',
+    'RA-WPEQ6ARNQEJ89CRC',
+    'RA-S3Q6D6D455VU9HGL',
+  ],
+  'lol-gift-card-575rp': [
+    'RA-KU9E4ZFX6MEW3B5D',
+    'RA-7L6RYCLM4C5EB4BY',
+    'RA-Z8SX7S65VSX4GR53',
+    'RA-DUTAN7QRDAZXG9JM',
+    'RA-RLF54TGNNYP7PKHH',
+  ],
+};
 
-export async function upsertStoreProducts(prisma: PrismaClient | Prisma.TransactionClient) {
+export async function upsertStoreProducts(
+  prisma: PrismaClient | Prisma.TransactionClient,
+) {
   for (const product of STORE_PRODUCT_SEED) {
     await prisma.storeProduct.upsert({
       where: { id: product.id },
@@ -45,21 +62,34 @@ export async function upsertStoreProducts(prisma: PrismaClient | Prisma.Transact
   }
 }
 
-export async function seedStoreKeysIfEmpty(prisma: PrismaClient) {
+export async function upsertStoreProductKeys(prisma: PrismaClient) {
   for (const product of STORE_PRODUCT_SEED) {
-    const availableCount = await prisma.storeProductKey.count({
-      where: { productId: product.id, status: 'AVAILABLE' },
-    });
-    if (availableCount > 0) {
-      continue;
+    const keys = STORE_PRODUCT_KEYS[product.id] ?? [];
+    for (const keyValue of keys) {
+      const existing = await prisma.storeProductKey.findFirst({
+        where: { productId: product.id, keyValue },
+      });
+      if (!existing) {
+        await prisma.storeProductKey.create({
+          data: {
+            productId: product.id,
+            keyValue,
+            status: 'AVAILABLE',
+          },
+        });
+      }
     }
-
-    const keys = Array.from({ length: DEV_KEYS_PER_PRODUCT }, (_, index) => ({
-      productId: product.id,
-      keyValue: `RIOT-DEV-${product.rpAmount}-${String(index + 1).padStart(3, '0')}`,
-      status: 'AVAILABLE' as const,
-    }));
-
-    await prisma.storeProductKey.createMany({ data: keys });
   }
+
+  await prisma.storeProductKey.deleteMany({
+    where: {
+      keyValue: { startsWith: 'RIOT-DEV-' },
+      status: 'AVAILABLE',
+    },
+  });
+}
+
+/** @deprecated Use upsertStoreProductKeys */
+export async function seedStoreKeysIfEmpty(prisma: PrismaClient) {
+  await upsertStoreProductKeys(prisma);
 }

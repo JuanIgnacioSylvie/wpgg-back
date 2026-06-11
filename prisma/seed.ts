@@ -4,7 +4,7 @@ import {
   upsertMissionTemplates,
 } from '../src/modules/missions/infrastructure/mission-template.seed';
 import {
-  seedStoreKeysIfEmpty,
+  upsertStoreProductKeys,
   upsertStoreProducts,
 } from '../src/modules/store/infrastructure/store-product.seed';
 
@@ -14,7 +14,7 @@ async function main() {
   await upsertMissionTemplates(prisma);
   await seedMarketPricesIfEmpty(prisma);
   await upsertStoreProducts(prisma);
-  await seedStoreKeysIfEmpty(prisma);
+  await upsertStoreProductKeys(prisma);
   console.log(
     'Seed completed: mission templates + market prices + store catalog',
   );

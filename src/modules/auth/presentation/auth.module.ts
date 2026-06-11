@@ -96,6 +96,7 @@ import { RiotModule } from '@modules/riot/presentation/riot.module';
   exports: [
     JWT_PROVIDER,
     JwtAuthGuard,
+    EMAIL_PROVIDER,
     USER_REPOSITORY,
     EstablishRiotOauthSessionUseCase,
     CreateRiotSessionExchangeCodeUseCase,

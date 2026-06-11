@@ -10,7 +10,15 @@ export type SendEmailVerificationInput = {
   verifyUrl: string;
 };
 
+export type SendStorePurchaseEmailInput = {
+  to: string;
+  productName: string;
+  rpAmount: number;
+  riotKey: string;
+};
+
 export interface IEmailProvider {
   sendPasswordResetEmail(input: SendPasswordResetEmailInput): Promise<void>;
   sendEmailVerification(input: SendEmailVerificationInput): Promise<void>;
+  sendStorePurchaseEmail(input: SendStorePurchaseEmailInput): Promise<void>;
 }
