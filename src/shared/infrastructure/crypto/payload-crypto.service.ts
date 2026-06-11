@@ -18,6 +18,7 @@ import {
   type KeyObject,
 } from 'crypto';
 import { isRelaxFromConfig } from '../../../config/relax-env';
+import { loadPrivateKeyFromEnv } from './payload-crypto-key.util';
 
 export const PAYLOAD_CRYPTO_VERSION = 1;
 const AES_KEY_BYTES = 32;
@@ -42,7 +43,7 @@ export class PayloadCryptoService implements OnModuleInit {
   onModuleInit(): void {
     const pem = this.config.get<string>('PAYLOAD_CRYPTO_PRIVATE_KEY')?.trim();
     if (pem) {
-      this.privateKey = createPrivateKey(pem);
+      this.privateKey = loadPrivateKeyFromEnv(pem);
     } else if (isRelaxFromConfig(this.config)) {
       const { privateKey, publicKey } = this.generateDevKeyPair();
       this.privateKey = privateKey;
