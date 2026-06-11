@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import {
+  IsEmail,
   IsEnum,
   IsIn,
   IsInt,
@@ -178,6 +179,11 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   EMAIL_FROM?: string;
+
+  /** Inbox for sponsor proposals from the landing page. */
+  @IsOptional()
+  @IsEmail()
+  SPONSOR_INBOX_EMAIL?: string;
 
   /** SPA route base for reset links, e.g. `https://wpgg.lol/reset-password`. */
   @IsOptional()

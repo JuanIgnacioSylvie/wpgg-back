@@ -17,8 +17,16 @@ export type SendStorePurchaseEmailInput = {
   riotKey: string;
 };
 
+export type SendSponsorProposalEmailInput = {
+  to: string;
+  companyName: string;
+  contactEmail: string;
+  message: string;
+};
+
 export interface IEmailProvider {
   sendPasswordResetEmail(input: SendPasswordResetEmailInput): Promise<void>;
   sendEmailVerification(input: SendEmailVerificationInput): Promise<void>;
   sendStorePurchaseEmail(input: SendStorePurchaseEmailInput): Promise<void>;
+  sendSponsorProposalEmail(input: SendSponsorProposalEmailInput): Promise<void>;
 }

@@ -5,6 +5,7 @@ import {
   IEmailProvider,
   SendEmailVerificationInput,
   SendPasswordResetEmailInput,
+  SendSponsorProposalEmailInput,
   SendStorePurchaseEmailInput,
 } from '../../domain/providers/email.provider.interface';
 
@@ -129,5 +130,61 @@ export class ResendEmailProvider implements IEmailProvider {
         timeout: 15_000,
       },
     );
+  }
+
+  async sendSponsorProposalEmail(
+    input: SendSponsorProposalEmailInput,
+  ): Promise<void> {
+    const apiKey = this.config.get<string>('RESEND_API_KEY')?.trim();
+    const from = this.config.get<string>('EMAIL_FROM')?.trim();
+    if (!apiKey || !from) {
+      this.logger.warn(
+        'Sponsor proposal email skipped: RESEND_API_KEY or EMAIL_FROM not configured',
+      );
+      return;
+    }
+
+    const escapedCompany = this.escapeHtml(input.companyName);
+    const escapedEmail = this.escapeHtml(input.contactEmail);
+    const escapedMessage = this.escapeHtml(input.message).replace(
+      /\n/g,
+      '<br>',
+    );
+
+    const subject = `Propuesta de sponsor WPGG — ${input.companyName}`;
+    const html = `
+      <p>Nueva propuesta de sponsor desde la landing de WPGG.</p>
+      <p><strong>Empresa / marca:</strong> ${escapedCompany}</p>
+      <p><strong>Email de contacto:</strong> <a href="mailto:${escapedEmail}">${escapedEmail}</a></p>
+      <p><strong>Mensaje:</strong></p>
+      <p>${escapedMessage}</p>
+    `.trim();
+
+    await axios.post(
+      'https://api.resend.com/emails',
+      {
+        from,
+        to: [input.to],
+        reply_to: input.contactEmail,
+        subject,
+        html,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 15_000,
+      },
+    );
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 }

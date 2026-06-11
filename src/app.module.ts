@@ -12,6 +12,7 @@ import { MissionsWorkerModule } from './modules/missions/presentation/missions-w
 import { RiotModule } from './modules/riot/presentation/riot.module';
 import { WalletModule } from './modules/wallet/presentation/wallet.module';
 import { WithdrawalModule } from './modules/withdrawals/presentation/withdrawal.module';
+import { ContactModule } from './modules/contact/presentation/contact.module';
 import { HealthModule } from './shared/presentation/health/health.module';
 import { SharedModule } from './shared/shared.module';
 
@@ -25,6 +26,7 @@ import { SharedModule } from './shared/shared.module';
     SharedModule,
     HealthModule,
     AuthModule,
+    ContactModule,
     RiotModule,
     DdragonModule,
     WalletModule,
