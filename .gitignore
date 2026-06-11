@@ -1,4 +1,5 @@
 /.env
+/.payload-crypto/
 /.kiro
 node_modules
 dist

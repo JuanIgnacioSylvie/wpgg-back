@@ -197,6 +197,14 @@ class EnvironmentVariables {
   @Max(86400)
   PASSWORD_RESET_TOKEN_TTL_SEC?: number;
 
+  /**
+   * RSA private key (PKCS#8 PEM) for decrypting sensitive request payloads.
+   * Required in production; auto-generated per boot when RELAX_VALIDATIONS is enabled.
+   */
+  @IsOptional()
+  @IsString()
+  PAYLOAD_CRYPTO_PRIVATE_KEY?: string;
+
   /** Cloudflare Turnstile secret for server-side captcha verification. */
   @IsOptional()
   @IsString()

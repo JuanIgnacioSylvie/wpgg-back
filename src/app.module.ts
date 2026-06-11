@@ -13,6 +13,7 @@ import { RiotModule } from './modules/riot/presentation/riot.module';
 import { WalletModule } from './modules/wallet/presentation/wallet.module';
 import { WithdrawalModule } from './modules/withdrawals/presentation/withdrawal.module';
 import { ContactModule } from './modules/contact/presentation/contact.module';
+import { CryptoModule } from './shared/presentation/crypto/crypto.module';
 import { HealthModule } from './shared/presentation/health/health.module';
 import { SharedModule } from './shared/shared.module';
 
@@ -24,6 +25,7 @@ import { SharedModule } from './shared/shared.module';
       validate,
     }),
     SharedModule,
+    CryptoModule,
     HealthModule,
     AuthModule,
     ContactModule,
