@@ -5,6 +5,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { validate } from './config/env.config';
 import { isRelaxFromConfig } from './config/relax-env';
 import { AuthModule } from './modules/auth/presentation/auth.module';
+import { ContactModule } from './modules/contact/presentation/contact.module';
 import { BlockchainModule } from './modules/blockchain/presentation/blockchain.module';
 import { DdragonModule } from './modules/ddragon/presentation/ddragon.module';
 import { MissionsModule } from './modules/missions/presentation/missions.module';
@@ -24,6 +25,7 @@ import { SharedModule } from './shared/shared.module';
     SharedModule,
     HealthModule,
     AuthModule,
+    ContactModule,
     RiotModule,
     DdragonModule,
     WalletModule,
