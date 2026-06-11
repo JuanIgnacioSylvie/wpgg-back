@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import {
-  seedMarketPricesIfEmpty,
+  ensureMarketPrices,
   upsertMissionTemplates,
 } from '../src/modules/missions/infrastructure/mission-template.seed';
 import {
@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   await upsertMissionTemplates(prisma);
-  await seedMarketPricesIfEmpty(prisma);
+  await ensureMarketPrices(prisma);
   await upsertStoreProducts(prisma);
   await upsertStoreProductKeys(prisma);
   console.log(

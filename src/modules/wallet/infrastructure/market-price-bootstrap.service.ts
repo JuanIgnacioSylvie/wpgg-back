@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
-import { seedMarketPricesIfEmpty } from '@modules/missions/infrastructure/mission-template.seed';
+import { ensureMarketPrices } from '@modules/missions/infrastructure/mission-template.seed';
 
 @Injectable()
 export class MarketPriceBootstrapService implements OnModuleInit {
@@ -9,11 +9,7 @@ export class MarketPriceBootstrapService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit(): Promise<void> {
-    const before = await this.prisma.wpggMarketPrice.count();
-    await seedMarketPricesIfEmpty(this.prisma);
-    const after = await this.prisma.wpggMarketPrice.count();
-    if (after > before) {
-      this.logger.log(`Market prices bootstrapped (${after - before} rows)`);
-    }
+    await ensureMarketPrices(this.prisma);
+    this.logger.log('Market prices refreshed (last 14 UTC days)');
   }
 }

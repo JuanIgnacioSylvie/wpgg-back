@@ -175,6 +175,7 @@ export class PrismaWalletRepository {
 
   marketChart(days: number) {
     const from = new Date();
+    from.setUTCHours(0, 0, 0, 0);
     from.setUTCDate(from.getUTCDate() - days);
     return this.prisma.wpggMarketPrice.findMany({
       where: { date: { gte: from } },
