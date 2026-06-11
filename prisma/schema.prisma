@@ -81,6 +81,7 @@ model User {
   processedMatches         ProcessedMatch[]
   withdrawals              Withdrawal[]
   storeOrders              StoreOrder[]
+  pushDevices              PushDevice[]
 }
 
 model EmailVerificationToken {
@@ -322,4 +323,17 @@ model StoreOrder {
 
   @@unique([userId, idempotencyKey])
   @@index([userId, createdAt])
+}
+
+model PushDevice {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  platform  String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

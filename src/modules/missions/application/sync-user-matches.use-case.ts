@@ -18,6 +18,7 @@ import {
 import { isMatchOnMissionDay } from '../domain/mission-timezone.util';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
+import { PushNotificationService } from '@modules/notifications/application/push-notification.service';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import { UserMissionContextService } from './user-mission-context.service';
 
@@ -37,6 +38,7 @@ export class SyncUserMatchesUseCase {
     private readonly prisma: PrismaService,
     private readonly context: UserMissionContextService,
     @Inject(RIOT_SERVICE) private readonly riotService: IRiotService,
+    private readonly pushNotifications: PushNotificationService,
   ) {}
 
   async execute(userId: string): Promise<{ processed: number }> {
@@ -166,6 +168,17 @@ export class SyncUserMatchesUseCase {
         },
       });
     });
+
+    if (completed) {
+      await this.pushNotifications
+        .sendMissionCompleted(userId, {
+          titleEn: mission.template.titleEn,
+          rewardWpgg: mission.template.rewardWpgg,
+        })
+        .catch((e) =>
+          this.logger.warn(`Mission push failed for ${userId}: ${e}`),
+        );
+    }
   }
 
   private async recomputeFlexSquadWelcomeProgress(
@@ -222,6 +235,17 @@ export class SyncUserMatchesUseCase {
         },
       });
     });
+
+    if (completed) {
+      await this.pushNotifications
+        .sendMissionCompleted(userId, {
+          titleEn: mission.template.titleEn,
+          rewardWpgg: mission.template.rewardWpgg,
+        })
+        .catch((e) =>
+          this.logger.warn(`Mission push failed for ${userId}: ${e}`),
+        );
+    }
   }
 
   private async countWpggTeammates(

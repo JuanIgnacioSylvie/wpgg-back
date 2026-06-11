@@ -9,6 +9,7 @@ import { ContactModule } from './modules/contact/presentation/contact.module';
 import { BlockchainModule } from './modules/blockchain/presentation/blockchain.module';
 import { DdragonModule } from './modules/ddragon/presentation/ddragon.module';
 import { MissionsModule } from './modules/missions/presentation/missions.module';
+import { NotificationsModule } from './modules/notifications/presentation/notifications.module';
 import { RiotModule } from './modules/riot/presentation/riot.module';
 import { StoreModule } from './modules/store/presentation/store.module';
 import { WalletModule } from './modules/wallet/presentation/wallet.module';
@@ -33,6 +34,7 @@ import { SharedModule } from './shared/shared.module';
     WalletModule,
     StoreModule,
     MissionsModule,
+    NotificationsModule,
     BlockchainModule,
     WithdrawalModule,
     ThrottlerModule.forRootAsync({

@@ -282,6 +282,19 @@ class EnvironmentVariables {
   @Min(1)
   @Max(20)
   MISSION_SYNC_QUEUE_CONCURRENCY?: number;
+
+  /** Firebase Admin — push notifications (optional). */
+  @IsOptional()
+  @IsString()
+  FIREBASE_PROJECT_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  FIREBASE_CLIENT_EMAIL?: string;
+
+  @IsOptional()
+  @IsString()
+  FIREBASE_PRIVATE_KEY?: string;
 }
 
 function applyWorkerUnusedDefaults(

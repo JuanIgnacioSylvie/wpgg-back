@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { NotificationsCoreModule } from '@modules/notifications/presentation/notifications-core.module';
 import { RiotModule } from '@modules/riot/presentation/riot.module';
 import { SharedModule } from '@shared/shared.module';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
@@ -15,7 +16,7 @@ import { WelcomeMissionService } from '../application/welcome-mission.service';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 
 @Module({
-  imports: [SharedModule, RiotModule],
+  imports: [SharedModule, RiotModule, NotificationsCoreModule],
   providers: [
     PrismaMissionsRepository,
     PrismaWalletRepository,
