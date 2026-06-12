@@ -82,6 +82,7 @@ model User {
   withdrawals              Withdrawal[]
   storeOrders              StoreOrder[]
   pushDevices              PushDevice[]
+  notifications            UserNotification[]
 }
 
 model EmailVerificationToken {
@@ -336,4 +337,19 @@ model PushDevice {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model UserNotification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  route     String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }

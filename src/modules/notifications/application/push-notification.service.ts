@@ -6,9 +6,11 @@ import {
 import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { PrismaPushDeviceRepository } from '../infrastructure/persistence/prisma-push-device.repository';
+import { PrismaNotificationInboxRepository } from '../infrastructure/persistence/prisma-notification-inbox.repository';
 import { parseFirebaseServiceAccount } from '../infrastructure/firebase-credential.util';
 
 export type PushPayload = {
+  type?: string;
   title: string;
   body: string;
   route?: string;
@@ -22,6 +24,7 @@ export class PushNotificationService implements OnModuleInit {
   constructor(
     private readonly config: ConfigService,
     private readonly devices: PrismaPushDeviceRepository,
+    private readonly inbox: PrismaNotificationInboxRepository,
   ) {}
 
   onModuleInit(): void {
@@ -67,9 +70,19 @@ export class PushNotificationService implements OnModuleInit {
       throw new Error('Push notifications are not configured on the server');
     }
 
+    await this.inbox.create(userId, {
+      type: payload.type ?? 'GENERAL',
+      title: payload.title,
+      body: payload.body,
+      route: payload.route,
+    });
+
     const tokens = await this.devices.findEnabledTokensForUser(userId);
     if (tokens.length === 0) {
-      throw new Error('No registered push devices for this user');
+      this.logger.log(
+        `Inbox notification saved for user ${userId}; no push devices registered`,
+      );
+      return;
     }
 
     const route = payload.route;
@@ -94,8 +107,10 @@ export class PushNotificationService implements OnModuleInit {
       });
 
       const invalidTokens: string[] = [];
+      let successCount = 0;
       response.responses.forEach((result, index) => {
         if (result.success) {
+          successCount += 1;
           return;
         }
         const code = result.error?.code;
@@ -111,9 +126,23 @@ export class PushNotificationService implements OnModuleInit {
         }
       });
 
+      if (successCount === 0) {
+        const firstError = response.responses.find((r) => !r.success)?.error
+          ?.message;
+        throw new Error(
+          firstError
+            ? `FCM rejected all tokens: ${firstError}`
+            : 'FCM rejected all tokens',
+        );
+      }
+
       if (invalidTokens.length > 0) {
         await this.devices.deleteByTokens(invalidTokens);
       }
+
+      this.logger.log(
+        `FCM delivered ${successCount}/${tokens.length} token(s) for user ${userId}`,
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : JSON.stringify(error);
@@ -127,6 +156,7 @@ export class PushNotificationService implements OnModuleInit {
     input: { titleEn: string; rewardWpgg: number },
   ): Promise<void> {
     await this.sendToUser(userId, {
+      type: 'MISSION_COMPLETED',
       title: 'Mission completed!',
       body: `${input.titleEn} — +${input.rewardWpgg} WPGG`,
       route: '/home',
