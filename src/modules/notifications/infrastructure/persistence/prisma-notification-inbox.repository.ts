@@ -81,4 +81,20 @@ export class PrismaNotificationInboxRepository {
       })
       .then((result) => result.count);
   }
+
+  deleteOne(userId: string, id: string): Promise<number> {
+    return this.prisma.userNotification
+      .deleteMany({
+        where: { id, userId },
+      })
+      .then((result) => result.count);
+  }
+
+  deleteAll(userId: string): Promise<number> {
+    return this.prisma.userNotification
+      .deleteMany({
+        where: { userId },
+      })
+      .then((result) => result.count);
+  }
 }

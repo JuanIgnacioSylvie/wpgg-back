@@ -90,3 +90,26 @@ export class MarkAllNotificationsReadUseCase {
     return { ok: true, count };
   }
 }
+
+@Injectable()
+export class DeleteNotificationUseCase {
+  constructor(private readonly inbox: PrismaNotificationInboxRepository) {}
+
+  async execute(userId: string, id: string) {
+    const deleted = await this.inbox.deleteOne(userId, id);
+    if (deleted === 0) {
+      throw new NotFoundException('Notification not found');
+    }
+    return { ok: true };
+  }
+}
+
+@Injectable()
+export class DeleteAllNotificationsUseCase {
+  constructor(private readonly inbox: PrismaNotificationInboxRepository) {}
+
+  async execute(userId: string) {
+    const count = await this.inbox.deleteAll(userId);
+    return { ok: true, count };
+  }
+}

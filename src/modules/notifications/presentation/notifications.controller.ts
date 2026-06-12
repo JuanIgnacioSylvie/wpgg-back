@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -12,6 +14,8 @@ import {
 import { JwtAuthGuard } from '@shared/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '@shared/infrastructure/decorators/current-user.decorator';
 import {
+  DeleteAllNotificationsUseCase,
+  DeleteNotificationUseCase,
   ListNotificationInboxUseCase,
   MarkAllNotificationsReadUseCase,
   MarkNotificationReadUseCase,
@@ -35,6 +39,8 @@ export class NotificationsController {
     private readonly listInbox: ListNotificationInboxUseCase,
     private readonly markRead: MarkNotificationReadUseCase,
     private readonly markAllRead: MarkAllNotificationsReadUseCase,
+    private readonly deleteNotification: DeleteNotificationUseCase,
+    private readonly deleteAllNotifications: DeleteAllNotificationsUseCase,
   ) {}
 
   @Post('devices')
@@ -75,5 +81,17 @@ export class NotificationsController {
   @Post('inbox/read-all')
   readAll(@CurrentUser() userId: string) {
     return this.markAllRead.execute(userId);
+  }
+
+  @Delete('inbox/:id')
+  @HttpCode(HttpStatus.OK)
+  deleteOne(@CurrentUser() userId: string, @Param('id') id: string) {
+    return this.deleteNotification.execute(userId, id);
+  }
+
+  @Delete('inbox')
+  @HttpCode(HttpStatus.OK)
+  deleteAll(@CurrentUser() userId: string) {
+    return this.deleteAllNotifications.execute(userId);
   }
 }

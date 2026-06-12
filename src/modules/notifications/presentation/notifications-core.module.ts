@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { SharedModule } from '@shared/shared.module';
 import { PushNotificationService } from '../application/push-notification.service';
 import {
+  DeleteAllNotificationsUseCase,
+  DeleteNotificationUseCase,
   ListNotificationInboxUseCase,
   MarkAllNotificationsReadUseCase,
   MarkNotificationReadUseCase,
@@ -24,6 +26,8 @@ import { PrismaPushDeviceRepository } from '../infrastructure/persistence/prisma
     ListNotificationInboxUseCase,
     MarkNotificationReadUseCase,
     MarkAllNotificationsReadUseCase,
+    DeleteNotificationUseCase,
+    DeleteAllNotificationsUseCase,
   ],
   exports: [
     PushNotificationService,
@@ -33,6 +37,8 @@ import { PrismaPushDeviceRepository } from '../infrastructure/persistence/prisma
     ListNotificationInboxUseCase,
     MarkNotificationReadUseCase,
     MarkAllNotificationsReadUseCase,
+    DeleteNotificationUseCase,
+    DeleteAllNotificationsUseCase,
   ],
 })
 export class NotificationsCoreModule {}
