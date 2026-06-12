@@ -49,8 +49,14 @@ export class ProfileController {
   }
 
   @Get('leaderboard')
-  leaderboard(@Query('limit') limit?: string) {
+  leaderboard(
+    @CurrentUser() userId: string,
+    @Query('limit') limit?: string,
+  ) {
     const n = limit ? parseInt(limit, 10) : 50;
-    return this.getLeaderboard.execute(Number.isNaN(n) ? 50 : n);
+    return this.getLeaderboard.execute(
+      userId,
+      Number.isNaN(n) ? 50 : n,
+    );
   }
 }
