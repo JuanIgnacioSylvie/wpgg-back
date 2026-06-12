@@ -28,6 +28,7 @@ export class UserMapper {
       passwordHash: entity.passwordHash,
       emailVerifiedAt: entity.emailVerifiedAt,
       timezone: null,
+      profilePublic: false,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     };

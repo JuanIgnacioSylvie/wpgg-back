@@ -69,6 +69,7 @@ model User {
   passwordHash             String
   emailVerifiedAt          DateTime?
   timezone                 String?
+  profilePublic            Boolean                   @default(false)
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   riotAccount              RiotAccount?
@@ -100,16 +101,17 @@ model EmailVerificationToken {
 }
 
 model RiotAccount {
-  id         String   @id @default(uuid())
-  userId     String   @unique
-  puuid      String   @unique
-  gameName   String
-  tagLine    String
-  region     String
-  summonerId String
-  accountId  String
-  linkedAt   DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  puuid         String   @unique
+  gameName      String
+  tagLine       String
+  region        String
+  summonerId    String
+  accountId     String
+  profileIconId Int?
+  linkedAt      DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model RefreshToken {

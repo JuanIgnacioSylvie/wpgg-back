@@ -28,6 +28,7 @@ export class RiotAccountMapper {
       region: entity.region,
       summonerId: entity.summonerId,
       accountId: entity.accountId,
+      profileIconId: null,
       linkedAt: entity.linkedAt,
     };
   }

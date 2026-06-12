@@ -1,4 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import { SummonerEntity } from '../../domain/entities/summoner.entity';
 
 export type SummonerProfileResult = {
@@ -23,6 +24,7 @@ export class GetSummonerProfileUseCase {
     private readonly riotAccountRepository: IRiotAccountRepository,
     @Inject(RIOT_SERVICE)
     private readonly riotService: IRiotService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async execute(userId: string): Promise<SummonerProfileResult> {
@@ -35,6 +37,10 @@ export class GetSummonerProfileUseCase {
       account.puuid,
       account.region,
     );
+    await this.prisma.riotAccount.update({
+      where: { userId },
+      data: { profileIconId: dto.profileIconId },
+    });
     return {
       summoner: new SummonerEntity(
         dto.puuid,
