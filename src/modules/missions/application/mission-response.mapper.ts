@@ -1,4 +1,5 @@
 import {
+  MissionCategory,
   MissionDifficulty,
   MissionOffer,
   MissionTemplate,
@@ -11,6 +12,7 @@ export interface MissionCardDto {
   id: string;
   offerId?: string;
   kind: MissionTemplateKind;
+  category: MissionCategory;
   difficulty: MissionDifficulty;
   titleEs: string;
   titleEn: string;
@@ -41,6 +43,7 @@ export function mapUserMission(
     id: um.id,
     offerId: um.offerId ?? offer?.id,
     kind: um.template.kind,
+    category: um.template.category,
     difficulty: um.template.difficulty,
     titleEs: um.template.titleEs,
     titleEn: um.template.titleEn,
@@ -61,6 +64,7 @@ export function mapOffer(
     id: offer.id,
     offerId: offer.id,
     kind: offer.template.kind,
+    category: offer.template.category,
     difficulty: offer.template.difficulty,
     titleEs: offer.template.titleEs,
     titleEn: offer.template.titleEn,

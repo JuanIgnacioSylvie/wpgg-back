@@ -32,8 +32,15 @@ export interface MatchParticipantDto {
   neutralMinionsKilled: number;
   visionScore: number;
   wardsKilled: number;
+  wardsPlaced: number;
   killParticipation: number;
   totalDamageDealtToChampions: number;
+  totalDamageDealtToTurrets: number;
+  damageDealtToObjectives: number;
+  turretKills: number;
+  firstTowerKill: boolean;
+  goldEarned: number;
+  largestMultiKill: number;
   totalHeal: number;
   totalHealsOnTeammates: number;
   totalDamageTaken: number;

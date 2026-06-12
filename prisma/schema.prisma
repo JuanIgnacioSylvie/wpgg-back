@@ -29,6 +29,40 @@ enum MissionRuleType {
   SINGLE_GAME_HEAL_DAMAGE
   GAMES_DAMAGE_TAKEN_WINS
   FLEX_SQUAD_WPGG_WIN
+  WIN_STREAK
+  GAMES_WIN_STRUCTURE_DAMAGE
+  GAMES_WIN_DAMAGE_CHAMPIONS
+  GAMES_WIN_ASSISTS
+  GAMES_WIN_KILLS
+  GAMES_WIN_FAST
+  GAMES_WIN_MULTIKILL
+  GAMES_WIN_GOLD
+  GAMES_WIN_FIRST_TOWER
+  GAMES_WIN_DEATHS_MAX
+  GAMES_WIN_CS
+  DAILY_WARDS_PLACED
+  GAMES_WIN_TOWERS
+}
+
+enum MissionCategory {
+  WELCOME
+  VERSATILE
+  FARMING
+  SUPPORT
+  WINSTREAK
+  OTP
+  TOP
+  JG
+  MID
+  BOTTOM
+  TANK
+  HEALER
+  CLUTCH
+  MULTIKILL
+  GOLD
+  OBJECTIVES
+  ASSASSIN
+  WARDS
 }
 
 enum MissionTemplateKind {
@@ -165,7 +199,9 @@ model RiotPendingLinkExchangeCode {
 
 model MissionTemplate {
   id          String            @id @default(uuid())
+  slug        String            @unique
   kind        MissionTemplateKind @default(STANDARD)
+  category    MissionCategory
   difficulty  MissionDifficulty
   ruleType    MissionRuleType
   titleEs     String
@@ -175,10 +211,11 @@ model MissionTemplate {
   targetJson  Json
   rewardWpgg  Int
   sortOrder   Int               @default(0)
+  active      Boolean           @default(true)
   offers      MissionOffer[]
   userMissions UserMission[]
 
-  @@index([difficulty])
+  @@index([difficulty, active])
   @@index([kind])
 }
 

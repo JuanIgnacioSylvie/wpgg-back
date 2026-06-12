@@ -2,8 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import { MISSION_TEMPLATE_SEEDS } from './data/mission-templates.data';
 import {
-  countMissionTemplates,
-  seedMarketPricesIfEmpty,
+  ensureMarketPrices,
   upsertMissionTemplates,
   upsertWelcomeMissionTemplate,
 } from './mission-template.seed';
@@ -15,14 +14,11 @@ export class MissionTemplateBootstrapService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit(): Promise<void> {
-    const count = await countMissionTemplates(this.prisma);
-    if (count < MISSION_TEMPLATE_SEEDS.length) {
-      await upsertMissionTemplates(this.prisma);
-      this.logger.log(
-        `Mission templates bootstrapped (${MISSION_TEMPLATE_SEEDS.length} definitions)`,
-      );
-    }
+    await upsertMissionTemplates(this.prisma);
     await upsertWelcomeMissionTemplate(this.prisma);
-    await seedMarketPricesIfEmpty(this.prisma);
+    await ensureMarketPrices(this.prisma);
+    this.logger.log(
+      `Mission templates synced (${MISSION_TEMPLATE_SEEDS.length} standard + welcome)`,
+    );
   }
 }

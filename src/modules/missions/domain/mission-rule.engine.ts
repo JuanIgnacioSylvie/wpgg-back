@@ -20,6 +20,17 @@ export interface MissionTemplateTarget {
   combinedMin?: number;
   damageTakenMin?: number;
   teammatesRequired?: number;
+  requireWin?: boolean;
+  structureDamageMin?: number;
+  damageMin?: number;
+  assistsMin?: number;
+  killsMin?: number;
+  deathsMax?: number;
+  maxDurationSec?: number;
+  minMultiKill?: number;
+  goldMin?: number;
+  csMin?: number;
+  towersMin?: number;
 }
 
 export interface RuleEvaluationContext {
@@ -38,8 +49,39 @@ function healDamageCombined(p: MatchParticipantDto): number {
   return p.totalHeal + p.totalHealsOnTeammates + p.totalDamageDealtToChampions;
 }
 
+function structureDamage(p: MatchParticipantDto): number {
+  return Math.max(p.damageDealtToObjectives, p.totalDamageDealtToTurrets);
+}
+
 function clampPercent(n: number): number {
   return Math.min(100, Math.max(0, Math.round(n)));
+}
+
+function winRequired(t: MissionTemplateTarget): boolean {
+  return t.requireWin !== false;
+}
+
+function bumpQualifying(next: MissionProgressState): void {
+  next.qualifyingGames = ((next.qualifyingGames as number) ?? 0) + 1;
+}
+
+function updateWinStreak(
+  next: MissionProgressState,
+  participant: MatchParticipantDto,
+  requireNoDeath = false,
+): void {
+  let current = (next.currentStreak as number) ?? 0;
+  let best = (next.bestStreak as number) ?? 0;
+  const qualifies =
+    participant.win && (!requireNoDeath || participant.deaths === 0);
+  if (qualifies) {
+    current += 1;
+    best = Math.max(best, current);
+  } else {
+    current = 0;
+  }
+  next.currentStreak = current;
+  next.bestStreak = best;
 }
 
 export function initialProgress(
@@ -53,15 +95,33 @@ export function initialProgress(
     case 'GAMES_VISION_MIN':
     case 'GAMES_KP_MIN':
     case 'GAMES_DAMAGE_TAKEN_WINS':
+    case 'GAMES_WIN_STRUCTURE_DAMAGE':
+    case 'GAMES_WIN_DAMAGE_CHAMPIONS':
+    case 'GAMES_WIN_ASSISTS':
+    case 'GAMES_WIN_KILLS':
+    case 'GAMES_WIN_FAST':
+    case 'GAMES_WIN_MULTIKILL':
+    case 'GAMES_WIN_GOLD':
+    case 'GAMES_WIN_FIRST_TOWER':
+    case 'GAMES_WIN_DEATHS_MAX':
+    case 'GAMES_WIN_CS':
       return { qualifyingGames: 0 };
+    case 'GAMES_WIN_TOWERS':
+      return { qualifyingGames: 0, turretsTotal: 0 };
     case 'CHAMPION_GAMES_WINS':
       return { gamesPlayed: 0, wins: 0 };
     case 'DAILY_WARDS_DESTROYED':
+    case 'DAILY_WARDS_PLACED':
       return { wardsTotal: 0 };
     case 'WIN_STREAK_NO_DEATH':
+    case 'WIN_STREAK':
       return { currentStreak: 0, bestStreak: 0 };
     case 'GAMES_WIN_STREAK_PENTAKILL':
-      return { currentStreak: 0, pentasInCurrentStreak: 0, bestQualified: false };
+      return {
+        currentStreak: 0,
+        pentasInCurrentStreak: 0,
+        bestQualified: false,
+      };
     case 'WIN_STREAK_EACH_ROLE_NO_DEATH':
       return {
         roleStreaks: {} as Record<string, number>,
@@ -80,7 +140,7 @@ export function applyMatchToProgress(
   ctx: RuleEvaluationContext,
   progress: MissionProgressState,
   participant: MatchParticipantDto,
-  _match: MatchDto,
+  match: MatchDto,
 ): MissionProgressState {
   const t = ctx.target;
   const next = { ...progress };
@@ -98,13 +158,19 @@ export function applyMatchToProgress(
       next.csTotal = ((next.csTotal as number) ?? 0) + csOf(participant);
       break;
     case 'GAMES_VISION_MIN':
-      if (participant.visionScore >= (t.visionMin ?? 0)) {
-        next.qualifyingGames = ((next.qualifyingGames as number) ?? 0) + 1;
+      if (
+        participant.visionScore >= (t.visionMin ?? 0) &&
+        (!t.requireWin || participant.win)
+      ) {
+        bumpQualifying(next);
       }
       break;
     case 'GAMES_KP_MIN':
-      if (participant.killParticipation >= (t.kpMin ?? 0)) {
-        next.qualifyingGames = ((next.qualifyingGames as number) ?? 0) + 1;
+      if (
+        participant.killParticipation >= (t.kpMin ?? 0) &&
+        (!t.requireWin || participant.win)
+      ) {
+        bumpQualifying(next);
       }
       break;
     case 'CHAMPION_GAMES_WINS': {
@@ -123,19 +189,16 @@ export function applyMatchToProgress(
       next.wardsTotal =
         ((next.wardsTotal as number) ?? 0) + participant.wardsKilled;
       break;
-    case 'WIN_STREAK_NO_DEATH': {
-      let current = (next.currentStreak as number) ?? 0;
-      let best = (next.bestStreak as number) ?? 0;
-      if (participant.win && participant.deaths === 0) {
-        current += 1;
-        best = Math.max(best, current);
-      } else {
-        current = 0;
-      }
-      next.currentStreak = current;
-      next.bestStreak = best;
+    case 'DAILY_WARDS_PLACED':
+      next.wardsTotal =
+        ((next.wardsTotal as number) ?? 0) + participant.wardsPlaced;
       break;
-    }
+    case 'WIN_STREAK_NO_DEATH':
+      updateWinStreak(next, participant, true);
+      break;
+    case 'WIN_STREAK':
+      updateWinStreak(next, participant, false);
+      break;
     case 'GAMES_WIN_STREAK_PENTAKILL': {
       let streak = (next.currentStreak as number) ?? 0;
       let pentas = (next.pentasInCurrentStreak as number) ?? 0;
@@ -152,8 +215,7 @@ export function applyMatchToProgress(
       next.pentasInCurrentStreak = pentas;
       const needStreak = t.streakWins ?? 5;
       const needPentas = t.pentasInStreak ?? 2;
-      next.bestQualified =
-        streak >= needStreak && pentas >= needPentas;
+      next.bestQualified = streak >= needStreak && pentas >= needPentas;
       break;
     }
     case 'WIN_STREAK_EACH_ROLE_NO_DEATH': {
@@ -191,7 +253,86 @@ export function applyMatchToProgress(
         participant.win &&
         participant.totalDamageTaken >= (t.damageTakenMin ?? 0)
       ) {
-        next.qualifyingGames = ((next.qualifyingGames as number) ?? 0) + 1;
+        bumpQualifying(next);
+      }
+      break;
+    case 'GAMES_WIN_STRUCTURE_DAMAGE':
+      if (
+        participant.win &&
+        structureDamage(participant) >= (t.structureDamageMin ?? 0)
+      ) {
+        bumpQualifying(next);
+      }
+      break;
+    case 'GAMES_WIN_DAMAGE_CHAMPIONS':
+      if (
+        participant.win &&
+        participant.totalDamageDealtToChampions >= (t.damageMin ?? 0)
+      ) {
+        bumpQualifying(next);
+      }
+      break;
+    case 'GAMES_WIN_ASSISTS':
+      if (participant.win && participant.assists >= (t.assistsMin ?? 0)) {
+        bumpQualifying(next);
+      }
+      break;
+    case 'GAMES_WIN_KILLS':
+      if (
+        participant.win &&
+        participant.kills >= (t.killsMin ?? 0) &&
+        (t.deathsMax == null || participant.deaths <= t.deathsMax)
+      ) {
+        bumpQualifying(next);
+      }
+      break;
+    case 'GAMES_WIN_FAST':
+      if (
+        participant.win &&
+        match.gameDuration <= (t.maxDurationSec ?? Number.MAX_SAFE_INTEGER)
+      ) {
+        bumpQualifying(next);
+      }
+      break;
+    case 'GAMES_WIN_MULTIKILL':
+      if (
+        participant.win &&
+        participant.largestMultiKill >= (t.minMultiKill ?? 2)
+      ) {
+        bumpQualifying(next);
+      }
+      break;
+    case 'GAMES_WIN_GOLD':
+      if (
+        participant.goldEarned >= (t.goldMin ?? 0) &&
+        (!winRequired(t) || participant.win)
+      ) {
+        bumpQualifying(next);
+      }
+      break;
+    case 'GAMES_WIN_FIRST_TOWER':
+      if (participant.win && participant.firstTowerKill) {
+        bumpQualifying(next);
+      }
+      break;
+    case 'GAMES_WIN_DEATHS_MAX':
+      if (
+        participant.win &&
+        participant.deaths <= (t.deathsMax ?? Number.MAX_SAFE_INTEGER)
+      ) {
+        bumpQualifying(next);
+      }
+      break;
+    case 'GAMES_WIN_CS':
+      if (participant.win && csOf(participant) >= (t.csMin ?? 0)) {
+        bumpQualifying(next);
+      }
+      break;
+    case 'GAMES_WIN_TOWERS':
+      if (participant.win) {
+        bumpQualifying(next);
+        next.turretsTotal =
+          ((next.turretsTotal as number) ?? 0) + participant.turretKills;
       }
       break;
     default:
@@ -199,6 +340,14 @@ export function applyMatchToProgress(
   }
 
   return next;
+}
+
+function qualifyingGamesProgress(
+  progress: MissionProgressState,
+  need: number,
+): number {
+  const g = (progress.qualifyingGames as number) ?? 0;
+  return clampPercent((g / need) * 100);
 }
 
 export function progressPercentFromState(
@@ -219,11 +368,28 @@ export function progressPercentFromState(
     }
     case 'GAMES_VISION_MIN':
     case 'GAMES_KP_MIN':
-    case 'GAMES_DAMAGE_TAKEN_WINS': {
-      const g = (progress.qualifyingGames as number) ?? 0;
-      const need =
-        t.gamesRequired ?? t.winsRequired ?? 5;
-      return clampPercent((g / need) * 100);
+    case 'GAMES_DAMAGE_TAKEN_WINS':
+    case 'GAMES_WIN_STRUCTURE_DAMAGE':
+    case 'GAMES_WIN_DAMAGE_CHAMPIONS':
+    case 'GAMES_WIN_ASSISTS':
+    case 'GAMES_WIN_KILLS':
+    case 'GAMES_WIN_FAST':
+    case 'GAMES_WIN_MULTIKILL':
+    case 'GAMES_WIN_GOLD':
+    case 'GAMES_WIN_FIRST_TOWER':
+    case 'GAMES_WIN_DEATHS_MAX':
+    case 'GAMES_WIN_CS': {
+      const need = t.gamesRequired ?? t.winsRequired ?? 5;
+      return qualifyingGamesProgress(progress, need);
+    }
+    case 'GAMES_WIN_TOWERS': {
+      const wins = (progress.qualifyingGames as number) ?? 0;
+      const turrets = (progress.turretsTotal as number) ?? 0;
+      const winsNeed = t.gamesRequired ?? 5;
+      const towersNeed = t.towersMin ?? 15;
+      return clampPercent(
+        Math.min(wins / winsNeed, turrets / towersNeed) * 100,
+      );
     }
     case 'CHAMPION_GAMES_WINS': {
       const games = (progress.gamesPlayed as number) ?? 0;
@@ -234,11 +400,13 @@ export function progressPercentFromState(
       const winPct = wins / winsNeed;
       return clampPercent(Math.min(gamePct, winPct) * 100);
     }
-    case 'DAILY_WARDS_DESTROYED': {
+    case 'DAILY_WARDS_DESTROYED':
+    case 'DAILY_WARDS_PLACED': {
       const w = (progress.wardsTotal as number) ?? 0;
       return clampPercent((w / (t.wardsTotal ?? 1)) * 100);
     }
-    case 'WIN_STREAK_NO_DEATH': {
+    case 'WIN_STREAK_NO_DEATH':
+    case 'WIN_STREAK': {
       const best = (progress.bestStreak as number) ?? 0;
       return clampPercent((best / (t.streakWins ?? 10)) * 100);
     }

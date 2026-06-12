@@ -226,8 +226,15 @@ export class RiotServiceAxios implements IRiotService {
           neutralMinionsKilled?: number;
           visionScore?: number;
           wardsKilled?: number;
+          wardsPlaced?: number;
           totalDamageDealtToChampions?: number;
           totalDamageDealt?: number;
+          totalDamageDealtToTurrets?: number;
+          damageDealtToObjectives?: number;
+          turretKills?: number;
+          firstTowerKill?: boolean;
+          goldEarned?: number;
+          largestMultiKill?: number;
           totalHeal?: number;
           totalHealsOnTeammates?: number;
           totalDamageTaken?: number;
@@ -261,11 +268,18 @@ export class RiotServiceAxios implements IRiotService {
         neutralMinionsKilled: p.neutralMinionsKilled ?? 0,
         visionScore: p.visionScore ?? 0,
         wardsKilled: p.wardsKilled ?? 0,
+        wardsPlaced: p.wardsPlaced ?? 0,
         killParticipation: p.challenges?.killParticipation ?? 0,
         totalDamageDealtToChampions:
           p.totalDamageDealtToChampions ?? p.totalDamageDealt ?? 0,
         totalDamageDealt:
           p.totalDamageDealtToChampions ?? p.totalDamageDealt ?? 0,
+        totalDamageDealtToTurrets: p.totalDamageDealtToTurrets ?? 0,
+        damageDealtToObjectives: p.damageDealtToObjectives ?? 0,
+        turretKills: p.turretKills ?? 0,
+        firstTowerKill: p.firstTowerKill ?? false,
+        goldEarned: p.goldEarned ?? 0,
+        largestMultiKill: p.largestMultiKill ?? 0,
         totalHeal: p.totalHeal ?? 0,
         totalHealsOnTeammates: p.totalHealsOnTeammates ?? 0,
         totalDamageTaken: p.totalDamageTaken ?? 0,

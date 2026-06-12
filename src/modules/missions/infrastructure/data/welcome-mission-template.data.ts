@@ -2,6 +2,8 @@ import { Prisma } from '@prisma/client';
 import { MissionTemplateSeed } from './mission-templates.data';
 
 export const WELCOME_MISSION_TEMPLATE: MissionTemplateSeed = {
+  slug: 'welcome',
+  category: 'WELCOME',
   kind: 'WELCOME',
   difficulty: 'EASY',
   ruleType: 'FLEX_SQUAD_WPGG_WIN',
@@ -12,6 +14,6 @@ export const WELCOME_MISSION_TEMPLATE: MissionTemplateSeed = {
   subtitleEn:
     'Complete a Flex game where all 5 players on your team have a WPGG account with a linked Riot profile. You must win the game.',
   targetJson: { teammatesRequired: 4 } satisfies Prisma.InputJsonValue,
-  rewardWpgg: 10,
+  rewardWpgg: 100,
   sortOrder: 0,
 };

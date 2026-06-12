@@ -28,7 +28,7 @@ export class PrismaMissionsRepository {
 
   findTemplatesByDifficulty(difficulty: MissionDifficulty) {
     return this.prisma.missionTemplate.findMany({
-      where: { difficulty, kind: 'STANDARD' },
+      where: { difficulty, kind: 'STANDARD', active: true },
       orderBy: { sortOrder: 'asc' },
     });
   }

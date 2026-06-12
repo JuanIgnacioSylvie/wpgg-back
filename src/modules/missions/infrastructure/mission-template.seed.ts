@@ -1,64 +1,52 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
-import { MISSION_TEMPLATE_SEEDS } from './data/mission-templates.data';
+import {
+  MISSION_TEMPLATE_SEEDS,
+  MISSION_TEMPLATE_SLUGS,
+} from './data/mission-templates.data';
 import { WELCOME_MISSION_TEMPLATE } from './data/welcome-mission-template.data';
 
 type PrismaLike = PrismaService | PrismaClient;
 
+async function upsertOne(db: PrismaLike, t: typeof MISSION_TEMPLATE_SEEDS[number]) {
+  await db.missionTemplate.upsert({
+    where: { slug: t.slug },
+    create: { ...t, kind: t.kind ?? 'STANDARD', active: true },
+    update: {
+      category: t.category,
+      kind: t.kind ?? 'STANDARD',
+      difficulty: t.difficulty,
+      ruleType: t.ruleType,
+      titleEs: t.titleEs,
+      titleEn: t.titleEn,
+      subtitleEs: t.subtitleEs,
+      subtitleEn: t.subtitleEn,
+      targetJson: t.targetJson,
+      rewardWpgg: t.rewardWpgg,
+      sortOrder: t.sortOrder,
+      active: true,
+    },
+  });
+}
+
 export async function upsertMissionTemplates(db: PrismaLike): Promise<void> {
   for (const t of MISSION_TEMPLATE_SEEDS) {
-    const existing = await db.missionTemplate.findFirst({
-      where: {
-        ruleType: t.ruleType,
-        difficulty: t.difficulty,
-        kind: t.kind ?? 'STANDARD',
-      },
-    });
-    if (existing) {
-      await db.missionTemplate.update({
-        where: { id: existing.id },
-        data: {
-          titleEs: t.titleEs,
-          titleEn: t.titleEn,
-          targetJson: t.targetJson,
-          rewardWpgg: t.rewardWpgg,
-          sortOrder: t.sortOrder,
-        },
-      });
-    } else {
-      await db.missionTemplate.create({
-        data: { ...t, kind: t.kind ?? 'STANDARD' },
-      });
-    }
+    await upsertOne(db, t);
   }
+
+  await db.missionTemplate.updateMany({
+    where: {
+      kind: 'STANDARD',
+      slug: { notIn: MISSION_TEMPLATE_SLUGS },
+    },
+    data: { active: false },
+  });
 }
 
 export async function upsertWelcomeMissionTemplate(
   db: PrismaLike,
 ): Promise<void> {
-  const t = WELCOME_MISSION_TEMPLATE;
-  const existing = await db.missionTemplate.findFirst({
-    where: { kind: 'WELCOME' },
-  });
-  if (existing) {
-    await db.missionTemplate.update({
-      where: { id: existing.id },
-      data: {
-        titleEs: t.titleEs,
-        titleEn: t.titleEn,
-        subtitleEs: t.subtitleEs,
-        subtitleEn: t.subtitleEn,
-        targetJson: t.targetJson,
-        rewardWpgg: t.rewardWpgg,
-        sortOrder: t.sortOrder,
-        ruleType: t.ruleType,
-      },
-    });
-  } else {
-    await db.missionTemplate.create({
-      data: { ...t, kind: 'WELCOME' },
-    });
-  }
+  await upsertOne(db, WELCOME_MISSION_TEMPLATE);
 }
 
 function utcDateDaysAgo(daysAgo: number): Date {
@@ -89,5 +77,5 @@ export async function seedMarketPricesIfEmpty(db: PrismaLike): Promise<void> {
 }
 
 export function countMissionTemplates(db: PrismaLike) {
-  return db.missionTemplate.count();
+  return db.missionTemplate.count({ where: { active: true, kind: 'STANDARD' } });
 }
