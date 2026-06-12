@@ -45,24 +45,12 @@ enum MissionRuleType {
 }
 
 enum MissionCategory {
-  WELCOME
-  VERSATILE
-  FARMING
-  SUPPORT
-  WINSTREAK
-  OTP
   TOP
-  JG
+  JUNGLE
   MID
   BOTTOM
-  TANK
-  HEALER
-  CLUTCH
-  MULTIKILL
-  GOLD
-  OBJECTIVES
-  ASSASSIN
-  WARDS
+  SUPPORT
+  AUTOFILL
 }
 
 enum MissionTemplateKind {
