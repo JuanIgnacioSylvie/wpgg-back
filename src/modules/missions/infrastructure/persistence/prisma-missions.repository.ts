@@ -154,7 +154,7 @@ export class PrismaMissionsRepository {
 
   findWelcomeTemplate() {
     return this.prisma.missionTemplate.findFirst({
-      where: { kind: 'WELCOME' },
+      where: { kind: 'WELCOME', slug: 'welcome', active: true },
     });
   }
 
