@@ -24,9 +24,17 @@ export type SendSponsorProposalEmailInput = {
   message: string;
 };
 
+export type SendSupportRequestEmailInput = {
+  to: string;
+  contactEmail: string;
+  subject: string;
+  message: string;
+};
+
 export interface IEmailProvider {
   sendPasswordResetEmail(input: SendPasswordResetEmailInput): Promise<void>;
   sendEmailVerification(input: SendEmailVerificationInput): Promise<void>;
   sendStorePurchaseEmail(input: SendStorePurchaseEmailInput): Promise<void>;
   sendSponsorProposalEmail(input: SendSponsorProposalEmailInput): Promise<void>;
+  sendSupportRequestEmail(input: SendSupportRequestEmailInput): Promise<void>;
 }

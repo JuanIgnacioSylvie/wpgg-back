@@ -9,6 +9,7 @@ describe('requiresEncryptedPayload', () => {
     expect(requiresEncryptedPayload('POST', '/auth/refresh')).toBe(true);
     expect(requiresEncryptedPayload('POST', '/withdrawals')).toBe(true);
     expect(requiresEncryptedPayload('POST', '/contact/sponsor')).toBe(true);
+    expect(requiresEncryptedPayload('POST', '/contact/support')).toBe(true);
   });
 
   it('matches parameterized store and riot routes', () => {

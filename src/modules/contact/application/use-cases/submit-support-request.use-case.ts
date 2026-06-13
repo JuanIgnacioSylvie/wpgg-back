@@ -11,9 +11,9 @@ import {
   IEmailProvider,
 } from '@modules/auth/domain/providers/email.provider.interface';
 
-export type SubmitSponsorProposalInput = {
-  companyName: string;
+export type SubmitSupportRequestInput = {
   contactEmail: string;
+  subject: string;
   message: string;
   turnstileToken?: string;
   clientPlatform?: string;
@@ -21,8 +21,8 @@ export type SubmitSponsorProposalInput = {
 };
 
 @Injectable()
-export class SubmitSponsorProposalUseCase {
-  private readonly logger = new Logger(SubmitSponsorProposalUseCase.name);
+export class SubmitSupportRequestUseCase {
+  private readonly logger = new Logger(SubmitSupportRequestUseCase.name);
 
   constructor(
     private readonly config: ConfigService,
@@ -31,7 +31,7 @@ export class SubmitSponsorProposalUseCase {
     private readonly email: IEmailProvider,
   ) {}
 
-  async execute(input: SubmitSponsorProposalInput): Promise<void> {
+  async execute(input: SubmitSupportRequestInput): Promise<void> {
     await this.turnstileGuard.assertForWebClient(
       input.turnstileToken,
       input.clientPlatform,
@@ -39,6 +39,7 @@ export class SubmitSponsorProposalUseCase {
     );
 
     const inbox =
+      this.config.get<string>('SUPPORT_INBOX_EMAIL')?.trim() ||
       this.config.get<string>('SPONSOR_INBOX_EMAIL')?.trim() ||
       'wpgg.support@gmail.com';
 
@@ -46,17 +47,17 @@ export class SubmitSponsorProposalUseCase {
     const from = this.config.get<string>('EMAIL_FROM')?.trim();
     if (!apiKey || !from) {
       this.logger.error(
-        'Sponsor proposal rejected: RESEND_API_KEY or EMAIL_FROM not configured',
+        'Support request rejected: RESEND_API_KEY or EMAIL_FROM not configured',
       );
       throw new BadRequestException(
-        'El envío de propuestas no está disponible en este momento',
+        'El envío de consultas no está disponible en este momento',
       );
     }
 
-    await this.email.sendSponsorProposalEmail({
+    await this.email.sendSupportRequestEmail({
       to: inbox,
-      companyName: input.companyName.trim(),
       contactEmail: input.contactEmail.trim().toLowerCase(),
+      subject: input.subject.trim(),
       message: input.message.trim(),
     });
   }

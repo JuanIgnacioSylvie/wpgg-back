@@ -10,6 +10,7 @@ const EXACT_ROUTES = new Set([
   '/auth/refresh',
   '/withdrawals',
   '/contact/sponsor',
+  '/contact/support',
 ]);
 
 const PATTERN_ROUTES: RegExp[] = [

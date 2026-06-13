@@ -185,6 +185,11 @@ class EnvironmentVariables {
   @IsEmail()
   SPONSOR_INBOX_EMAIL?: string;
 
+  /** Inbox for support requests from the app profile. */
+  @IsOptional()
+  @IsEmail()
+  SUPPORT_INBOX_EMAIL?: string;
+
   /** SPA route base for reset links, e.g. `https://wpgg.lol/reset-password`. */
   @IsOptional()
   @IsString()
