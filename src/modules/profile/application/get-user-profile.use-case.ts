@@ -14,6 +14,8 @@ import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persisten
 import {
   findSeedLeaderboardUser,
   isSeedLeaderboardUser,
+  mergeLeaderboardWithSeedUsers,
+  resolveLeaderboardViewer,
 } from '../infrastructure/leaderboard-seed-users';
 import { PrismaProfileRepository } from '../infrastructure/persistence/prisma-profile.repository';
 
@@ -72,6 +74,12 @@ export class GetUserProfileUseCase {
 
     const pastRows = await this.missionsRepo.findPastMissions(targetUserId, 30);
     const past = pastRows.map((m) => mapUserMission(m));
+    const completedMissionsCount =
+      await this.missionsRepo.countCompletedMissionsForUser(targetUserId);
+    const leaderboardContext = await this.resolveLeaderboardContext(
+      targetUserId,
+      wallet.balance,
+    );
 
     return {
       userId: target.id,
@@ -83,6 +91,11 @@ export class GetUserProfileUseCase {
       balanceWpgg: wallet.balance,
       balanceUsd: Number((wallet.balance * latestPriceUsd).toFixed(2)),
       latestPriceUsd,
+      completedMissionsCount,
+      leaderboardRank: leaderboardContext.rank,
+      leaderboardInTop: leaderboardContext.inTop,
+      gapToAbove: leaderboardContext.gapToAbove,
+      gapToLeader: leaderboardContext.gapToLeader,
       welcome,
       primary,
       secondary,
@@ -108,6 +121,13 @@ export class GetUserProfileUseCase {
     const prices = await this.walletRepo.marketChart(1);
     const latestPriceUsd =
       prices.length > 0 ? Number(prices[prices.length - 1].priceUsd) : 0.17;
+    const leaderboardContext = await this.resolveLeaderboardContext(
+      seedUser.userId,
+      seedUser.balanceWpgg,
+    );
+    const stats = mergeLeaderboardWithSeedUsers([], 100).find(
+      (entry) => entry.userId === seedUser.userId,
+    );
 
     return {
       userId: seedUser.userId,
@@ -119,10 +139,81 @@ export class GetUserProfileUseCase {
       balanceWpgg: seedUser.balanceWpgg,
       balanceUsd: Number((seedUser.balanceWpgg * latestPriceUsd).toFixed(2)),
       latestPriceUsd,
+      completedMissionsCount: stats?.completedMissionsCount ?? 0,
+      leaderboardRank: stats?.rank ?? leaderboardContext.rank,
+      leaderboardInTop: leaderboardContext.inTop,
+      gapToAbove: leaderboardContext.gapToAbove,
+      gapToLeader: leaderboardContext.gapToLeader,
       welcome: null,
       primary: null,
       secondary: [],
       past: [],
+    };
+  }
+
+  private async resolveLeaderboardContext(userId: string, balance: number) {
+    const rows = await this.profileRepo.findLeaderboard(100);
+    const realUserIds = rows.map((row) => row.id);
+    const [completedCounts, activeSummaries, totalPublic] = await Promise.all([
+      this.missionsRepo.countCompletedMissionsByUserIds(realUserIds),
+      this.missionsRepo.findPrimaryActiveMissionSummaries(realUserIds),
+      this.profileRepo.countPublicLeaderboardPlayers(),
+    ]);
+
+    const entries = mergeLeaderboardWithSeedUsers(
+      rows.map((row) => {
+        const completed = completedCounts.get(row.id) ?? 0;
+        const active = activeSummaries.get(row.id);
+        return {
+          id: row.id,
+          balanceWpgg: row.wpggWallet?.balance ?? 0,
+          gameName: row.riotAccount!.gameName,
+          tagLine: row.riotAccount!.tagLine,
+          region: row.riotAccount!.region,
+          profileIconId: row.riotAccount!.profileIconId ?? 0,
+          stats: active
+            ? {
+                completedMissionsCount: completed,
+                activeMissionTitleEn: active.titleEn,
+                activeMissionTitleEs: active.titleEs,
+                activeMissionProgressPercent: active.progressPercent,
+                activeMissionChampionId: active.championId,
+              }
+            : {
+                completedMissionsCount: completed,
+                activeMissionTitleEn: null,
+                activeMissionTitleEs: null,
+                activeMissionProgressPercent: null,
+                activeMissionChampionId: null,
+              },
+        };
+      }),
+      100,
+    );
+
+    const listed = entries.find((entry) => entry.userId === userId);
+    let rank = listed?.rank ?? 0;
+    let inTop = listed != null;
+    if (!inTop && !isSeedLeaderboardUser(userId)) {
+      const ahead = await this.profileRepo.countUsersAheadOfBalance(balance);
+      rank = ahead + 1;
+    } else if (!inTop && isSeedLeaderboardUser(userId)) {
+      const seedEntry = entries.find((entry) => entry.userId === userId);
+      rank = seedEntry?.rank ?? 0;
+      inTop = seedEntry != null;
+    }
+
+    const resolved = resolveLeaderboardViewer(
+      entries,
+      { userId, balanceWpgg: balance, rank, inTop },
+      totalPublic,
+    );
+
+    return {
+      rank: resolved.rank,
+      inTop: resolved.inTop,
+      gapToAbove: resolved.gapToAbove,
+      gapToLeader: resolved.gapToLeader,
     };
   }
 }

@@ -62,4 +62,24 @@ export class PrismaProfileRepository {
       },
     });
   }
+
+  countPublicLeaderboardPlayers() {
+    return this.prisma.user.count({
+      where: {
+        profilePublic: true,
+        riotAccount: { isNot: null },
+        wpggWallet: { isNot: null },
+      },
+    });
+  }
+
+  countUsersAheadOfBalance(balance: number) {
+    return this.prisma.user.count({
+      where: {
+        profilePublic: true,
+        riotAccount: { isNot: null },
+        wpggWallet: { balance: { gt: balance } },
+      },
+    });
+  }
 }

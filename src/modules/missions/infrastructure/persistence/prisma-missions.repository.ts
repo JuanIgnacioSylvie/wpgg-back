@@ -289,4 +289,89 @@ export class PrismaMissionsRepository {
       distinct: ['missionDayId'],
     });
   }
+
+  countCompletedMissionsForUser(userId: string) {
+    return this.prisma.userMission.count({
+      where: {
+        status: 'COMPLETED',
+        missionDay: { userId },
+      },
+    });
+  }
+
+  async countCompletedMissionsByUserIds(
+    userIds: string[],
+  ): Promise<Map<string, number>> {
+    if (userIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.prisma.userMission.findMany({
+      where: {
+        status: 'COMPLETED',
+        missionDay: { userId: { in: userIds } },
+      },
+      select: { missionDay: { select: { userId: true } } },
+    });
+
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+      const userId = row.missionDay.userId;
+      counts.set(userId, (counts.get(userId) ?? 0) + 1);
+    }
+    return counts;
+  }
+
+  async findPrimaryActiveMissionSummaries(userIds: string[]) {
+    if (userIds.length === 0) {
+      return new Map<
+        string,
+        {
+          titleEn: string;
+          titleEs: string;
+          progressPercent: number;
+          championId: number | null;
+        }
+      >();
+    }
+
+    const rows = await this.prisma.userMission.findMany({
+      where: {
+        status: 'ACTIVE',
+        missionDay: { userId: { in: userIds } },
+        template: { kind: 'STANDARD' },
+      },
+      include: {
+        template: true,
+        offer: true,
+        missionDay: { select: { userId: true } },
+      },
+      orderBy: [{ acceptedAt: 'asc' }],
+    });
+
+    const summaries = new Map<
+      string,
+      {
+        titleEn: string;
+        titleEs: string;
+        progressPercent: number;
+        championId: number | null;
+      }
+    >();
+
+    for (const row of rows) {
+      const userId = row.missionDay.userId;
+      if (summaries.has(userId)) {
+        continue;
+      }
+      summaries.set(userId, {
+        titleEn: row.template.titleEn,
+        titleEs: row.template.titleEs,
+        progressPercent: row.progressPercent,
+        championId: row.offer?.championId ?? null,
+      });
+    }
+
+    return summaries;
+  }
 }
