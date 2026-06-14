@@ -11,6 +11,10 @@ import {
 } from '@modules/missions/application/mission-response.mapper';
 import { PrismaMissionsRepository } from '@modules/missions/infrastructure/persistence/prisma-missions.repository';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
+import {
+  findSeedLeaderboardUser,
+  isSeedLeaderboardUser,
+} from '../infrastructure/leaderboard-seed-users';
 import { PrismaProfileRepository } from '../infrastructure/persistence/prisma-profile.repository';
 
 @Injectable()
@@ -22,14 +26,16 @@ export class GetUserProfileUseCase {
   ) {}
 
   async execute(viewerId: string, targetUserId: string) {
-    const [viewer, target] = await Promise.all([
-      this.profileRepo.getProfileSettings(viewerId),
-      this.profileRepo.findUserForProfile(targetUserId),
-    ]);
-
+    const viewer = await this.profileRepo.getProfileSettings(viewerId);
     if (!viewer) {
       throw new NotFoundException();
     }
+
+    if (isSeedLeaderboardUser(targetUserId)) {
+      return this.buildSeedUserProfile(viewerId, viewer.profilePublic, targetUserId);
+    }
+
+    const target = await this.profileRepo.findUserForProfile(targetUserId);
     if (!target || !target.riotAccount) {
       throw new NotFoundException();
     }
@@ -81,6 +87,42 @@ export class GetUserProfileUseCase {
       primary,
       secondary,
       past,
+    };
+  }
+
+  private async buildSeedUserProfile(
+    viewerId: string,
+    viewerProfilePublic: boolean,
+    targetUserId: string,
+  ) {
+    const seedUser = findSeedLeaderboardUser(targetUserId);
+    if (!seedUser) {
+      throw new NotFoundException();
+    }
+
+    const isSelf = viewerId === targetUserId;
+    if (!isSelf && !viewerProfilePublic) {
+      throw new ForbiddenException('PRIVATE_VIEWER');
+    }
+
+    const prices = await this.walletRepo.marketChart(1);
+    const latestPriceUsd =
+      prices.length > 0 ? Number(prices[prices.length - 1].priceUsd) : 0.17;
+
+    return {
+      userId: seedUser.userId,
+      profilePublic: true,
+      gameName: seedUser.gameName,
+      tagLine: seedUser.tagLine,
+      region: seedUser.region,
+      profileIconId: seedUser.profileIconId,
+      balanceWpgg: seedUser.balanceWpgg,
+      balanceUsd: Number((seedUser.balanceWpgg * latestPriceUsd).toFixed(2)),
+      latestPriceUsd,
+      welcome: null,
+      primary: null,
+      secondary: [],
+      past: [],
     };
   }
 }
