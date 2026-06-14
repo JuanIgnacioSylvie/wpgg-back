@@ -1,6 +1,9 @@
 const { spawnSync } = require('child_process');
 
 const mode = process.env.APP_MODE || 'api';
+if (mode === 'worker') {
+  process.env.APP_MODE = 'worker';
+}
 const entry =
   mode === 'worker'
     ? 'dist/main-worker'

@@ -3,3 +3,4 @@
 /.kiro
 node_modules
 dist
+tsconfig.build.tsbuildinfo
