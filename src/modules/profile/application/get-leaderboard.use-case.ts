@@ -3,12 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaMissionsRepository } from '@modules/missions/infrastructure/persistence/prisma-missions.repository';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
-import {
-  EMPTY_LEADERBOARD_MISSION_STATS,
-  LeaderboardResponsePayload,
-} from '../domain/leaderboard.types';
+import { LeaderboardResponsePayload } from '../domain/leaderboard.types';
 import {
   mergeLeaderboardWithSeedUsers,
   resolveLeaderboardViewer,
@@ -19,7 +15,6 @@ import { PrismaProfileRepository } from '../infrastructure/persistence/prisma-pr
 export class GetLeaderboardUseCase {
   constructor(
     private readonly repo: PrismaProfileRepository,
-    private readonly missionsRepo: PrismaMissionsRepository,
     private readonly walletRepo: PrismaWalletRepository,
   ) {}
 
@@ -34,45 +29,25 @@ export class GetLeaderboardUseCase {
 
     const capped = Math.min(Math.max(limit, 1), 100);
     const rows = await this.repo.findLeaderboard(capped);
-    const realUserIds = rows.map((row) => row.id);
 
-    const [completedCounts, activeSummaries, viewerWallet, prices, totalPublic] =
-      await Promise.all([
-        this.missionsRepo.countCompletedMissionsByUserIds(realUserIds),
-        this.missionsRepo.findPrimaryActiveMissionSummaries(realUserIds),
-        this.walletRepo.ensureWallet(viewerId),
-        this.walletRepo.marketChart(1),
-        this.repo.countPublicLeaderboardPlayers(),
-      ]);
+    const [viewerWallet, prices, totalPublic] = await Promise.all([
+      this.walletRepo.ensureWallet(viewerId),
+      this.walletRepo.marketChart(1),
+      this.repo.countPublicLeaderboardPlayers(),
+    ]);
 
     const latestPriceUsd =
       prices.length > 0 ? Number(prices[prices.length - 1].priceUsd) : 0.17;
 
     const entries = mergeLeaderboardWithSeedUsers(
-      rows.map((row) => {
-        const completed = completedCounts.get(row.id) ?? 0;
-        const active = activeSummaries.get(row.id);
-        return {
-          id: row.id,
-          balanceWpgg: row.wpggWallet?.balance ?? 0,
-          gameName: row.riotAccount!.gameName,
-          tagLine: row.riotAccount!.tagLine,
-          region: row.riotAccount!.region,
-          profileIconId: row.riotAccount!.profileIconId ?? 0,
-          stats: active
-            ? {
-                completedMissionsCount: completed,
-                activeMissionTitleEn: active.titleEn,
-                activeMissionTitleEs: active.titleEs,
-                activeMissionProgressPercent: active.progressPercent,
-                activeMissionChampionId: active.championId,
-              }
-            : {
-                ...EMPTY_LEADERBOARD_MISSION_STATS,
-                completedMissionsCount: completed,
-              },
-        };
-      }),
+      rows.map((row) => ({
+        id: row.id,
+        balanceWpgg: row.wpggWallet?.balance ?? 0,
+        gameName: row.riotAccount!.gameName,
+        tagLine: row.riotAccount!.tagLine,
+        region: row.riotAccount!.region,
+        profileIconId: row.riotAccount!.profileIconId ?? 0,
+      })),
       capped,
     );
 

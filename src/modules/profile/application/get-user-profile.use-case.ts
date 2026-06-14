@@ -16,6 +16,7 @@ import {
   isSeedLeaderboardUser,
   mergeLeaderboardWithSeedUsers,
   resolveLeaderboardViewer,
+  seedCompletedMissionsCount,
 } from '../infrastructure/leaderboard-seed-users';
 import { PrismaProfileRepository } from '../infrastructure/persistence/prisma-profile.repository';
 
@@ -125,9 +126,6 @@ export class GetUserProfileUseCase {
       seedUser.userId,
       seedUser.balanceWpgg,
     );
-    const stats = mergeLeaderboardWithSeedUsers([], 100).find(
-      (entry) => entry.userId === seedUser.userId,
-    );
 
     return {
       userId: seedUser.userId,
@@ -139,8 +137,8 @@ export class GetUserProfileUseCase {
       balanceWpgg: seedUser.balanceWpgg,
       balanceUsd: Number((seedUser.balanceWpgg * latestPriceUsd).toFixed(2)),
       latestPriceUsd,
-      completedMissionsCount: stats?.completedMissionsCount ?? 0,
-      leaderboardRank: stats?.rank ?? leaderboardContext.rank,
+      completedMissionsCount: seedCompletedMissionsCount(seedUser.balanceWpgg),
+      leaderboardRank: leaderboardContext.rank,
       leaderboardInTop: leaderboardContext.inTop,
       gapToAbove: leaderboardContext.gapToAbove,
       gapToLeader: leaderboardContext.gapToLeader,
@@ -153,41 +151,17 @@ export class GetUserProfileUseCase {
 
   private async resolveLeaderboardContext(userId: string, balance: number) {
     const rows = await this.profileRepo.findLeaderboard(100);
-    const realUserIds = rows.map((row) => row.id);
-    const [completedCounts, activeSummaries, totalPublic] = await Promise.all([
-      this.missionsRepo.countCompletedMissionsByUserIds(realUserIds),
-      this.missionsRepo.findPrimaryActiveMissionSummaries(realUserIds),
-      this.profileRepo.countPublicLeaderboardPlayers(),
-    ]);
+    const totalPublic = await this.profileRepo.countPublicLeaderboardPlayers();
 
     const entries = mergeLeaderboardWithSeedUsers(
-      rows.map((row) => {
-        const completed = completedCounts.get(row.id) ?? 0;
-        const active = activeSummaries.get(row.id);
-        return {
-          id: row.id,
-          balanceWpgg: row.wpggWallet?.balance ?? 0,
-          gameName: row.riotAccount!.gameName,
-          tagLine: row.riotAccount!.tagLine,
-          region: row.riotAccount!.region,
-          profileIconId: row.riotAccount!.profileIconId ?? 0,
-          stats: active
-            ? {
-                completedMissionsCount: completed,
-                activeMissionTitleEn: active.titleEn,
-                activeMissionTitleEs: active.titleEs,
-                activeMissionProgressPercent: active.progressPercent,
-                activeMissionChampionId: active.championId,
-              }
-            : {
-                completedMissionsCount: completed,
-                activeMissionTitleEn: null,
-                activeMissionTitleEs: null,
-                activeMissionProgressPercent: null,
-                activeMissionChampionId: null,
-              },
-        };
-      }),
+      rows.map((row) => ({
+        id: row.id,
+        balanceWpgg: row.wpggWallet?.balance ?? 0,
+        gameName: row.riotAccount!.gameName,
+        tagLine: row.riotAccount!.tagLine,
+        region: row.riotAccount!.region,
+        profileIconId: row.riotAccount!.profileIconId ?? 0,
+      })),
       100,
     );
 

@@ -1,11 +1,3 @@
-export type LeaderboardMissionStats = {
-  completedMissionsCount: number;
-  activeMissionTitleEn: string | null;
-  activeMissionTitleEs: string | null;
-  activeMissionProgressPercent: number | null;
-  activeMissionChampionId: number | null;
-};
-
 export type LeaderboardEntry = {
   rank: number;
   userId: string;
@@ -14,11 +6,6 @@ export type LeaderboardEntry = {
   tagLine: string;
   region: string;
   profileIconId: number;
-  completedMissionsCount: number;
-  activeMissionTitleEn: string | null;
-  activeMissionTitleEs: string | null;
-  activeMissionProgressPercent: number | null;
-  activeMissionChampionId: number | null;
 };
 
 export type LeaderboardViewerPayload = {
@@ -34,12 +21,4 @@ export type LeaderboardResponsePayload = {
   entries: LeaderboardEntry[];
   viewer: LeaderboardViewerPayload;
   latestPriceUsd: number;
-};
-
-export const EMPTY_LEADERBOARD_MISSION_STATS: LeaderboardMissionStats = {
-  completedMissionsCount: 0,
-  activeMissionTitleEn: null,
-  activeMissionTitleEs: null,
-  activeMissionProgressPercent: null,
-  activeMissionChampionId: null,
 };

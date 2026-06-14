@@ -1,8 +1,4 @@
-import {
-  EMPTY_LEADERBOARD_MISSION_STATS,
-  LeaderboardEntry,
-  LeaderboardMissionStats,
-} from '../domain/leaderboard.types';
+import { LeaderboardEntry } from '../domain/leaderboard.types';
 import {
   LEADERBOARD_SEED_USER_PREFIX,
   LEADERBOARD_SEED_USERS,
@@ -21,48 +17,6 @@ export function findSeedLeaderboardUser(
   return LEADERBOARD_SEED_USERS.find((user) => user.userId === userId);
 }
 
-function seedMissionStats(balanceWpgg: number, index: number): LeaderboardMissionStats {
-  const completed = Math.min(52, Math.max(2, Math.floor(balanceWpgg / 95)));
-  const hasActive = index < 18;
-  if (!hasActive) {
-    return { ...EMPTY_LEADERBOARD_MISSION_STATS, completedMissionsCount: completed };
-  }
-  const progress = Math.min(92, 28 + ((index * 11) % 55));
-  return {
-    completedMissionsCount: completed,
-    activeMissionTitleEn: 'Win 3 games with strong vision score',
-    activeMissionTitleEs: 'Ganá 3 partidas con buen score de visión',
-    activeMissionProgressPercent: progress,
-    activeMissionChampionId: [103, 64, 157, 222, 81][index % 5] ?? null,
-  };
-}
-
-function toEntryFields(
-  row: {
-    userId: string;
-    balanceWpgg: number;
-    gameName: string;
-    tagLine: string;
-    region: string;
-    profileIconId: number;
-  },
-  stats: LeaderboardMissionStats,
-): Omit<LeaderboardEntry, 'rank'> {
-  return {
-    userId: row.userId,
-    balanceWpgg: row.balanceWpgg,
-    gameName: row.gameName,
-    tagLine: row.tagLine,
-    region: row.region,
-    profileIconId: row.profileIconId,
-    completedMissionsCount: stats.completedMissionsCount,
-    activeMissionTitleEn: stats.activeMissionTitleEn,
-    activeMissionTitleEs: stats.activeMissionTitleEs,
-    activeMissionProgressPercent: stats.activeMissionProgressPercent,
-    activeMissionChampionId: stats.activeMissionChampionId,
-  };
-}
-
 export function mergeLeaderboardWithSeedUsers(
   realRows: Array<{
     id: string;
@@ -71,7 +25,6 @@ export function mergeLeaderboardWithSeedUsers(
     tagLine: string;
     region: string;
     profileIconId: number;
-    stats?: LeaderboardMissionStats;
   }>,
   limit: number,
 ): LeaderboardEntry[] {
@@ -83,16 +36,14 @@ export function mergeLeaderboardWithSeedUsers(
       tagLine: row.tagLine,
       region: row.region,
       profileIconId: row.profileIconId,
-      stats: row.stats ?? EMPTY_LEADERBOARD_MISSION_STATS,
     })),
-    ...LEADERBOARD_SEED_USERS.map((seed, index) => ({
+    ...LEADERBOARD_SEED_USERS.map((seed) => ({
       userId: seed.userId,
       balanceWpgg: seed.balanceWpgg,
       gameName: seed.gameName,
       tagLine: seed.tagLine,
       region: seed.region,
       profileIconId: seed.profileIconId,
-      stats: seedMissionStats(seed.balanceWpgg, index),
     })),
   ];
 
@@ -100,7 +51,7 @@ export function mergeLeaderboardWithSeedUsers(
 
   return combined.slice(0, limit).map((entry, index) => ({
     rank: index + 1,
-    ...toEntryFields(entry, entry.stats),
+    ...entry,
   }));
 }
 
@@ -155,4 +106,8 @@ export function resolveLeaderboardViewer(
         ? Math.max(0, leaderBalance - viewer.balanceWpgg)
         : null,
   };
+}
+
+export function seedCompletedMissionsCount(balanceWpgg: number): number {
+  return Math.min(52, Math.max(2, Math.floor(balanceWpgg / 95)));
 }
