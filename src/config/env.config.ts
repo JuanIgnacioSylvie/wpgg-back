@@ -305,6 +305,11 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   FIREBASE_SERVICE_ACCOUNT_JSON?: string;
+
+  /** Nest logger verbosity: error | warn | log | debug | verbose */
+  @IsOptional()
+  @IsIn(['error', 'warn', 'log', 'debug', 'verbose'])
+  LOG_LEVEL?: string;
 }
 
 function applyWorkerUnusedDefaults(

@@ -5,6 +5,7 @@ import {
   MISSION_SYNC_JOB,
   MISSION_SYNC_QUEUE,
 } from '@shared/infrastructure/queue/queue.constants';
+import { shouldLogSchedulerTicks } from '@config/nest-logger';
 import { SyncUserMatchesUseCase } from './sync-user-matches.use-case';
 
 type MissionSyncJobData = { userId: string };
@@ -32,9 +33,11 @@ export class MissionSyncProcessor extends WorkerHost {
     const { userId } = job.data;
     try {
       const result = await this.sync.execute(userId);
-      this.logger.debug(
-        `Synced user ${userId}: ${result.processed} new matches`,
-      );
+      if (result.processed > 0 && shouldLogSchedulerTicks()) {
+        this.logger.log(
+          `Synced user ${userId}: ${result.processed} new matches`,
+        );
+      }
       return result;
     } catch (error) {
       this.logger.warn(`Sync failed for ${userId}: ${error}`);

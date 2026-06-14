@@ -11,7 +11,6 @@ import {
   MissionDayWithRelations,
   PrismaMissionsRepository,
 } from '../infrastructure/persistence/prisma-missions.repository';
-import { SyncUserMatchesUseCase } from './sync-user-matches.use-case';
 import { UserMissionContextService } from './user-mission-context.service';
 import {
   missionCalendarDateString,
@@ -25,7 +24,6 @@ export class GetMissionsHomeUseCase {
     private readonly repo: PrismaMissionsRepository,
     private readonly context: UserMissionContextService,
     private readonly offerGen: MissionOfferGeneratorService,
-    private readonly sync: SyncUserMatchesUseCase,
     private readonly welcomeMission: WelcomeMissionService,
   ) {}
 
@@ -36,8 +34,6 @@ export class GetMissionsHomeUseCase {
     const day = await this.repo.getOrCreateMissionDay(userId, today);
     await this.offerGen.ensureDailyOffers(day.id);
     await this.welcomeMission.ensureForUser(userId, day.id);
-
-    await this.sync.execute(userId);
 
     const refreshed: MissionDayWithRelations | null =
       await this.repo.findMissionDay(userId, day.calendarDate);

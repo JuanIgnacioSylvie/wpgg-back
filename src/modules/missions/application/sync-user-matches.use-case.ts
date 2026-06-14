@@ -176,7 +176,9 @@ export class SyncUserMatchesUseCase {
           rewardWpgg: mission.template.rewardWpgg,
         })
         .catch((e) =>
-          this.logger.warn(`Mission push failed for ${userId}: ${e}`),
+          this.logger.warn(
+            `Mission push/inbox failed for ${userId} (mission ${mission.id}): ${e}`,
+          ),
         );
     }
   }
@@ -243,7 +245,9 @@ export class SyncUserMatchesUseCase {
           rewardWpgg: mission.template.rewardWpgg,
         })
         .catch((e) =>
-          this.logger.warn(`Mission push failed for ${userId}: ${e}`),
+          this.logger.warn(
+            `Mission push/inbox failed for ${userId} (mission ${mission.id}): ${e}`,
+          ),
         );
     }
   }

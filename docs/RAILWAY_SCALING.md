@@ -33,7 +33,7 @@ Variables **sin cambio**: `DATABASE_URL`, `JWT_SECRET`, `RIOT_API_KEY`, `ALLOWED
 El repo incluye `railway.toml` para el service API:
 
 - **Build:** `npm run build` (solo compila; no necesita `DATABASE_URL`)
-- **Pre-deploy:** `npm run prisma:deploy` (migraciones con `DATABASE_URL`)
+- **Pre-deploy:** `node scripts/pre-deploy.js` (migraciones solo en `APP_MODE=api`; el worker las omite)
 - **Start:** `npm run start:railway` (con `APP_MODE=api`)
 
 Si en el dashboard de Railway tenías **Build Command** = `npm run start:with-migrate`, borralo o dejalo vacío para que use `railway.toml`. Ese script mezcla migrate + start y falla en build porque ahí no hay `DATABASE_URL`.
@@ -61,6 +61,23 @@ Opcional (el worker no las usa en Fase 1; el código rellena defaults si faltan)
 JWT_SECRET=${{wpgg-api.JWT_SECRET}}
 ```
 
+**Firebase (requerido para push + inbox al completar misiones en el worker):**
+
+```bash
+FIREBASE_SERVICE_ACCOUNT_JSON=${{wpgg-api.FIREBASE_SERVICE_ACCOUNT_JSON}}
+# o las tres vars sueltas referenciando wpgg-api
+FIREBASE_PROJECT_ID=${{wpgg-api.FIREBASE_PROJECT_ID}}
+FIREBASE_CLIENT_EMAIL=${{wpgg-api.FIREBASE_CLIENT_EMAIL}}
+FIREBASE_PRIVATE_KEY=${{wpgg-api.FIREBASE_PRIVATE_KEY}}
+```
+
+**Observabilidad (recomendado en ambos servicios):**
+
+```bash
+LOG_LEVEL=log
+NPM_CONFIG_OMIT=dev
+```
+
 3. Start command: dejar vacío en el dashboard para usar `railway.toml` (`npm run start:railway`). Con `APP_MODE=worker` arranca `main-worker` automáticamente.
 
 Si tenías un override manual (`npm run start:api` o `start:prod:worker`), bórralo para que use el toml del repo.
@@ -85,6 +102,33 @@ Con usuarios con misiones activas, en logs del worker deberías ver:
 - `Enqueued mission sync for N users`
 - `Synced user ...: X new matches`
 
+## Observabilidad en Railway
+
+### Logs útiles (CLI)
+
+```bash
+railway logs --service wpgg-api --http --status ">=400" --lines 50
+railway logs --service wpgg-api --http --filter "@totalDuration:>=3000"
+railway logs --service wpgg-worker --lines 100
+```
+
+En producción (`LOG_LEVEL=log` o sin definir), el worker emite en nivel **LOG**:
+
+- `Enqueued mission sync for N users` (cada 5 min)
+- `Enqueued mission expiry job` (cada hora)
+- `Synced user ...: X new matches` (cuando procesa partidas nuevas)
+
+Buscar `Mission push/inbox failed` si Firebase no está configurado en el worker.
+
+### Alertas sugeridas (Railway dashboard → Observability)
+
+| Alerta | Condición |
+|--------|-----------|
+| Deploy fallido | deployment status = failed |
+| Restarts frecuentes | container restarts > N en 15 min |
+| Errores HTTP | `@httpStatus:>=500` en logs HTTP del API |
+| Latencia alta | `@totalDuration:>=5000` en rutas críticas (`/missions/home`) |
+
 ## Desarrollo local
 
 ```bash
@@ -103,7 +147,8 @@ APP_MODE=worker npm run start:worker
 
 | Tarea | API | Worker |
 |-------|-----|--------|
-| REST `/auth`, `/missions`, `/wallet`, … | ✅ | ❌ |
+| REST `/auth`, `/missions`, `/wallet`, … | ✅ | ❌ (solo `/health`) |
+| `GET /missions/home` | ✅ lectura rápida (sin sync Riot) | ❌ |
 | `POST /missions/sync` (on-demand) | ✅ síncrono | ❌ |
 | Scheduler sync cada 5 min | ❌ | ✅ → cola BullMQ |
 | Scheduler expiración misiones | ❌ | ✅ → cola BullMQ |

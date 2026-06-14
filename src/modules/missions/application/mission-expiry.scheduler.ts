@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisLockService } from '@shared/infrastructure/redis/redis-lock.service';
+import { shouldLogSchedulerTicks } from '@config/nest-logger';
 import { MissionExpiryProducer } from './mission-expiry.producer';
 
 const LOCK_KEY = 'lock:mission-expiry-tick';
@@ -47,7 +48,9 @@ export class MissionExpiryScheduler implements OnModuleInit, OnModuleDestroy {
 
     try {
       await this.producer.enqueueExpiry();
-      this.logger.debug('Enqueued mission expiry job');
+      if (shouldLogSchedulerTicks()) {
+        this.logger.log('Enqueued mission expiry job');
+      }
     } catch (error) {
       this.logger.warn(`Failed to enqueue mission expiry: ${error}`);
     }

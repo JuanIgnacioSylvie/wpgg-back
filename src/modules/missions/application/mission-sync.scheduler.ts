@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import { RedisLockService } from '@shared/infrastructure/redis/redis-lock.service';
+import { shouldLogSchedulerTicks } from '@config/nest-logger';
 import { MissionSyncProducer } from './mission-sync.producer';
 
 const LOCK_KEY = 'lock:mission-sync-tick';
@@ -61,8 +62,8 @@ export class MissionSyncScheduler implements OnModuleInit, OnModuleDestroy {
       }
     }
 
-    if (userIds.length > 0) {
-      this.logger.debug(`Enqueued mission sync for ${userIds.length} users`);
+    if (userIds.length > 0 && shouldLogSchedulerTicks()) {
+      this.logger.log(`Enqueued mission sync for ${userIds.length} users`);
     }
   }
 }
