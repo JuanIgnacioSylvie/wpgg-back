@@ -21,7 +21,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:baron-slayer',
-    balanceWpgg: 4_189,
+    balanceWpgg: 4_190,
     gameName: 'BaronSlayer',
     tagLine: 'EUW',
     region: 'EUW',
@@ -37,7 +37,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:rift-queen',
-    balanceWpgg: 3_461,
+    balanceWpgg: 3_460,
     gameName: 'RiftQueen',
     tagLine: 'LAN',
     region: 'LAN',
@@ -53,7 +53,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:dragon-soul',
-    balanceWpgg: 2_866,
+    balanceWpgg: 2_865,
     gameName: 'DragonSoul',
     tagLine: 'NA1',
     region: 'NA1',
@@ -61,7 +61,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:top-gap',
-    balanceWpgg: 2_603,
+    balanceWpgg: 2_605,
     gameName: 'TopGap',
     tagLine: 'EUW',
     region: 'EUW',
@@ -77,7 +77,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:adc-carry',
-    balanceWpgg: 2_149,
+    balanceWpgg: 2_150,
     gameName: 'ADCCarry',
     tagLine: 'NA1',
     region: 'NA1',
@@ -85,7 +85,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:support-diff',
-    balanceWpgg: 1_918,
+    balanceWpgg: 1_920,
     gameName: 'SupportDiff',
     tagLine: 'BR1',
     region: 'BR1',
@@ -93,7 +93,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:ward-master',
-    balanceWpgg: 1_726,
+    balanceWpgg: 1_725,
     gameName: 'WardMaster',
     tagLine: 'EUW',
     region: 'EUW',
@@ -101,7 +101,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:flash-fail',
-    balanceWpgg: 1_548,
+    balanceWpgg: 1_550,
     gameName: 'FlashFail',
     tagLine: 'LAN',
     region: 'LAN',
@@ -109,7 +109,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:blue-buff',
-    balanceWpgg: 1_379,
+    balanceWpgg: 1_380,
     gameName: 'BlueBuff',
     tagLine: 'LAS',
     region: 'LAS',
@@ -117,7 +117,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:red-side',
-    balanceWpgg: 1_208,
+    balanceWpgg: 1_210,
     gameName: 'RedSide',
     tagLine: 'NA1',
     region: 'NA1',
@@ -125,7 +125,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:minion-hunter',
-    balanceWpgg: 1_062,
+    balanceWpgg: 1_060,
     gameName: 'MinionHunter',
     tagLine: 'EUW',
     region: 'EUW',
@@ -141,7 +141,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:aram-only',
-    balanceWpgg: 779,
+    balanceWpgg: 780,
     gameName: 'ARAMOnly',
     tagLine: 'NA1',
     region: 'NA1',
@@ -149,7 +149,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:clash-captain',
-    balanceWpgg: 652,
+    balanceWpgg: 650,
     gameName: 'ClashCaptain',
     tagLine: 'EUW',
     region: 'EUW',
@@ -157,7 +157,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:iron-climber',
-    balanceWpgg: 504,
+    balanceWpgg: 500,
     gameName: 'IronClimber',
     tagLine: 'LAN',
     region: 'LAN',
@@ -165,7 +165,7 @@ export const LEADERBOARD_SEED_USERS: LeaderboardSeedUser[] = [
   },
   {
     userId: 'seed:rift-rookie',
-    balanceWpgg: 358,
+    balanceWpgg: 360,
     gameName: 'RiftRookie',
     tagLine: 'LAS',
     region: 'LAS',
