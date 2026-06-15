@@ -1,6 +1,7 @@
 /.env
 /.payload-crypto/
 /.kiro
-node_modules
-dist
-tsconfig.build.tsbuildinfo
+node_modules/
+dist/
+*.tsbuildinfo
+.env
