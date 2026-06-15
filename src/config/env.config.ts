@@ -180,6 +180,16 @@ class EnvironmentVariables {
   @IsString()
   EMAIL_FROM?: string;
 
+  /** Public site URL for email footer links (default `https://wpgg.lol`). */
+  @IsOptional()
+  @IsString()
+  EMAIL_PUBLIC_SITE_URL?: string;
+
+  /** Absolute logo URL for transactional emails (default `{EMAIL_PUBLIC_SITE_URL}/icons/Icon-192.png`). */
+  @IsOptional()
+  @IsString()
+  EMAIL_LOGO_URL?: string;
+
   /** Inbox for sponsor proposals from the landing page. */
   @IsOptional()
   @IsEmail()
