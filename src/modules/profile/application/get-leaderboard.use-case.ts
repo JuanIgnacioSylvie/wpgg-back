@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { WpggMarketPriceService } from '@modules/wallet/application/wpgg-market-price.service';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
 import { LeaderboardResponsePayload } from '../domain/leaderboard.types';
 import {
@@ -16,6 +17,7 @@ export class GetLeaderboardUseCase {
   constructor(
     private readonly repo: PrismaProfileRepository,
     private readonly walletRepo: PrismaWalletRepository,
+    private readonly marketPrices: WpggMarketPriceService,
   ) {}
 
   async execute(viewerId: string, limit = 50): Promise<LeaderboardResponsePayload> {
@@ -30,14 +32,11 @@ export class GetLeaderboardUseCase {
     const capped = Math.min(Math.max(limit, 1), 100);
     const rows = await this.repo.findLeaderboard(capped);
 
-    const [viewerWallet, prices, totalPublic] = await Promise.all([
+    const [viewerWallet, latestPriceUsd, totalPublic] = await Promise.all([
       this.walletRepo.ensureWallet(viewerId),
-      this.walletRepo.marketChart(1),
+      this.marketPrices.getLatestPriceUsd(),
       this.repo.countPublicLeaderboardPlayers(),
     ]);
-
-    const latestPriceUsd =
-      prices.length > 0 ? Number(prices[prices.length - 1].priceUsd) : 0.17;
 
     const entries = mergeLeaderboardWithSeedUsers(
       rows.map((row) => ({

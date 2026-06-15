@@ -1,18 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaWalletRepository } from '../infrastructure/persistence/prisma-wallet.repository';
+import { WpggMarketPriceService } from './wpgg-market-price.service';
 
 @Injectable()
 export class GetMarketChartUseCase {
-  constructor(private readonly walletRepo: PrismaWalletRepository) {}
+  constructor(private readonly marketPrices: WpggMarketPriceService) {}
 
   async execute(days = 7) {
     const clamped = Math.min(Math.max(days, 1), 30);
-    const rows = await this.walletRepo.marketChart(clamped);
-    return {
-      points: rows.map((r) => ({
-        date: r.date.toISOString().slice(0, 10),
-        priceUsd: Number(r.priceUsd),
-      })),
-    };
+    const points = await this.marketPrices.getChart(clamped);
+    return { points };
   }
 }

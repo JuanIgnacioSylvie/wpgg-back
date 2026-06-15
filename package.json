@@ -33,7 +33,6 @@
     "start:with-migrate:worker": "node ./node_modules/prisma/build/index.js migrate deploy && node dist/main-worker",
     "prisma:seed": "npx tsx prisma/seed.ts",
     "reset:missions": "npx tsx scripts/reset-missions.ts",
-    "prisma:seed:market": "node scripts/seed-market-prices.js",
     "store:delete-purchase": "npx tsx scripts/delete-store-purchase.ts"
   },
   "prisma": {

@@ -1,8 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import {
-  ensureMarketPrices,
-  upsertMissionTemplates,
-} from '../src/modules/missions/infrastructure/mission-template.seed';
+import { upsertMissionTemplates } from '../src/modules/missions/infrastructure/mission-template.seed';
 import {
   upsertStoreProductKeys,
   upsertStoreProducts,
@@ -12,11 +9,10 @@ const prisma = new PrismaClient();
 
 async function main() {
   await upsertMissionTemplates(prisma);
-  await ensureMarketPrices(prisma);
   await upsertStoreProducts(prisma);
   await upsertStoreProductKeys(prisma);
   console.log(
-    'Seed completed: mission templates + market prices + store catalog',
+    'Seed completed: mission templates + store catalog',
   );
 }
 

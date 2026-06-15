@@ -11,6 +11,7 @@ import {
 } from '@modules/missions/application/mission-response.mapper';
 import { PrismaMissionsRepository } from '@modules/missions/infrastructure/persistence/prisma-missions.repository';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
+import { WpggMarketPriceService } from '@modules/wallet/application/wpgg-market-price.service';
 import {
   findSeedLeaderboardUser,
   isSeedLeaderboardUser,
@@ -26,6 +27,7 @@ export class GetUserProfileUseCase {
     private readonly profileRepo: PrismaProfileRepository,
     private readonly missionsRepo: PrismaMissionsRepository,
     private readonly walletRepo: PrismaWalletRepository,
+    private readonly marketPrices: WpggMarketPriceService,
   ) {}
 
   async execute(viewerId: string, targetUserId: string) {
@@ -54,9 +56,7 @@ export class GetUserProfileUseCase {
     }
 
     const wallet = await this.walletRepo.ensureWallet(targetUserId);
-    const prices = await this.walletRepo.marketChart(1);
-    const latestPriceUsd =
-      prices.length > 0 ? Number(prices[prices.length - 1].priceUsd) : 0.17;
+    const latestPriceUsd = await this.marketPrices.getLatestPriceUsd();
 
     const activeMissions =
       await this.missionsRepo.findActiveMissionsForUser(targetUserId);
@@ -119,9 +119,7 @@ export class GetUserProfileUseCase {
       throw new ForbiddenException('PRIVATE_VIEWER');
     }
 
-    const prices = await this.walletRepo.marketChart(1);
-    const latestPriceUsd =
-      prices.length > 0 ? Number(prices[prices.length - 1].priceUsd) : 0.17;
+    const latestPriceUsd = await this.marketPrices.getLatestPriceUsd();
     const leaderboardContext = await this.resolveLeaderboardContext(
       seedUser.userId,
       seedUser.balanceWpgg,

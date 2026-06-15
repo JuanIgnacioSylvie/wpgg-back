@@ -5,23 +5,25 @@ import {
   WPGG_REROLL_COST,
 } from '../domain/wpgg-economy.constants';
 import { PrismaWalletRepository } from '../infrastructure/persistence/prisma-wallet.repository';
+import { WpggMarketPriceService } from './wpgg-market-price.service';
 
 @Injectable()
 export class GetWalletUseCase {
-  constructor(private readonly walletRepo: PrismaWalletRepository) {}
+  constructor(
+    private readonly walletRepo: PrismaWalletRepository,
+    private readonly marketPrices: WpggMarketPriceService,
+  ) {}
 
   async execute(userId: string) {
     const wallet = await this.walletRepo.ensureWallet(userId);
-    const prices = await this.walletRepo.marketChart(1);
-    const latestPrice =
-      prices.length > 0 ? Number(prices[prices.length - 1].priceUsd) : 0.17;
+    const latestPriceUsd = await this.marketPrices.getLatestPriceUsd();
 
     return {
       balance: wallet.balance,
       minWithdrawWpgg: WPGG_MIN_WITHDRAW,
       rerollCostWpgg: WPGG_REROLL_COST,
       cancelCostWpgg: WPGG_CANCEL_COST,
-      latestPriceUsd: latestPrice,
+      latestPriceUsd,
     };
   }
 }

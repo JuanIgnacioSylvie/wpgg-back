@@ -49,33 +49,6 @@ export async function upsertWelcomeMissionTemplate(
   await upsertOne(db, WELCOME_MISSION_TEMPLATE);
 }
 
-function utcDateDaysAgo(daysAgo: number): Date {
-  const now = new Date();
-  return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysAgo),
-  );
-}
-
-/** Upserts the last 14 UTC days so chart queries always have recent points. */
-export async function ensureMarketPrices(db: PrismaLike): Promise<void> {
-  const base = 0.12;
-  for (let i = 13; i >= 0; i--) {
-    const date = utcDateDaysAgo(i);
-    const jitter = (Math.sin(i) * 0.02 + i * 0.003) % 0.05;
-    const priceUsd = base + jitter;
-    await db.wpggMarketPrice.upsert({
-      where: { date },
-      create: { date, priceUsd },
-      update: { priceUsd },
-    });
-  }
-}
-
-/** @deprecated Use ensureMarketPrices */
-export async function seedMarketPricesIfEmpty(db: PrismaLike): Promise<void> {
-  await ensureMarketPrices(db);
-}
-
 export function countMissionTemplates(db: PrismaLike) {
   return db.missionTemplate.count({ where: { active: true, kind: 'STANDARD' } });
 }
