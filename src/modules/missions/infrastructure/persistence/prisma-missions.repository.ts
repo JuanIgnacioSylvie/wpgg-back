@@ -272,9 +272,37 @@ export class PrismaMissionsRepository {
     });
   }
 
-  markMatchProcessed(userId: string, matchId: string) {
+  findProcessedMatches(userId: string, matchIds: string[]) {
+    if (matchIds.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.prisma.processedMatch.findMany({
+      where: { userId, matchId: { in: matchIds } },
+    });
+  }
+
+  markMatchProcessed(
+    userId: string,
+    matchId: string,
+    payload?: { gameCreation: number; matchPayloadJson: object },
+  ) {
     return this.prisma.processedMatch.create({
-      data: { userId, matchId },
+      data: {
+        userId,
+        matchId,
+        gameCreation: payload ? BigInt(payload.gameCreation) : undefined,
+        matchPayloadJson: payload?.matchPayloadJson,
+      },
+    });
+  }
+
+  updateSyncCursor(
+    userId: string,
+    data: { latestMatchId: string | null; lastSyncedAt: Date },
+  ) {
+    return this.prisma.riotAccount.update({
+      where: { userId },
+      data,
     });
   }
 

@@ -6,6 +6,7 @@ import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persisten
 import { AcceptMissionOfferUseCase } from '../application/accept-mission-offer.use-case';
 import { CancelActiveMissionUseCase } from '../application/cancel-active-mission.use-case';
 import { GetMissionsByDayUseCase } from '../application/get-missions-by-day.use-case';
+import { GetMissionSyncStatusUseCase } from '../application/get-mission-sync-status.use-case';
 import { GetMissionsHomeUseCase } from '../application/get-missions-home.use-case';
 import { GetPickTodayUseCase } from '../application/get-pick-today.use-case';
 import { MissionOfferGeneratorService } from '../application/mission-offer-generator.service';
@@ -23,6 +24,7 @@ import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-m
     MissionOfferGeneratorService,
     UserMissionContextService,
     SyncUserMatchesUseCase,
+    GetMissionSyncStatusUseCase,
     GetMissionsHomeUseCase,
     GetMissionsByDayUseCase,
     GetPickTodayUseCase,

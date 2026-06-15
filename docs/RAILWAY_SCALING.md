@@ -114,7 +114,7 @@ railway logs --service wpgg-worker --lines 100
 
 En producción (`LOG_LEVEL=log` o sin definir), el worker emite en nivel **LOG**:
 
-- `Enqueued mission sync for N users` (cada 5 min)
+- `Enqueued mission sync for N users` (cada 30 min por defecto; fallback si el usuario no sincroniza manualmente)
 - `Enqueued mission expiry job` (cada hora)
 - `Synced user ...: X new matches` (cuando procesa partidas nuevas)
 
@@ -149,8 +149,9 @@ APP_MODE=worker npm run start:worker
 |-------|-----|--------|
 | REST `/auth`, `/missions`, `/wallet`, … | ✅ | ❌ (solo `/health`) |
 | `GET /missions/home` | ✅ lectura rápida (sin sync Riot) | ❌ |
-| `POST /missions/sync` (on-demand) | ✅ síncrono | ❌ |
-| Scheduler sync cada 5 min | ❌ | ✅ → cola BullMQ |
+| `GET /missions/sync-status` | ✅ 1 llamada Riot (staleness) | ❌ |
+| `POST /missions/sync` (manual) | ✅ síncrono | ❌ |
+| Scheduler sync cada 30 min (fallback) | ❌ | ✅ → cola BullMQ |
 | Scheduler expiración misiones | ❌ | ✅ → cola BullMQ |
 | Bootstrap mission templates | ❌ | ✅ |
 | Retiros on-chain | ✅ (sin cambio Fase 1) | ❌ |

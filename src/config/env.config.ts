@@ -37,7 +37,7 @@ const RELAX_ENV_DEFAULTS: Record<string, unknown> = {
   APP_MODE: 'all',
   REDIS_URL: 'redis://localhost:6379',
   BULL_PREFIX: 'wpgg',
-  MISSION_SYNC_INTERVAL_MS: 300_000,
+  MISSION_SYNC_INTERVAL_MS: 1_800_000,
   MISSION_EXPIRY_INTERVAL_MS: 3_600_000,
   MISSION_SYNC_QUEUE_CONCURRENCY: 3,
 };
@@ -269,7 +269,7 @@ class EnvironmentVariables {
   @IsString()
   BULL_PREFIX?: string;
 
-  /** Mission sync scheduler interval in ms (default: 300000 = 5 min). */
+  /** Mission sync scheduler interval in ms (default: 1800000 = 30 min). */
   @IsOptional()
   @IsInt()
   @Min(60_000)

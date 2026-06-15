@@ -30,6 +30,8 @@ export class RiotAccountMapper {
       accountId: entity.accountId,
       profileIconId: null,
       linkedAt: entity.linkedAt,
+      lastSyncedAt: null,
+      latestMatchId: null,
     };
   }
 }

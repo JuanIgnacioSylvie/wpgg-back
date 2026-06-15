@@ -16,6 +16,7 @@ import {
   progressPercentFromState,
 } from '../domain/mission-rule.engine';
 import { isMatchOnMissionDay } from '../domain/mission-timezone.util';
+import { MissionSyncStatus } from '../domain/mission-sync-status';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
 import { PushNotificationService } from '@modules/notifications/application/push-notification.service';
@@ -27,6 +28,13 @@ const SYNC_MATCH_COUNT = 30;
 type ActiveMission = Awaited<
   ReturnType<PrismaMissionsRepository['findActiveMissionsForUser']>
 >[number];
+
+export interface SyncUserMatchesResult {
+  processed: number;
+  status: typeof MissionSyncStatus.UP_TO_DATE;
+  lastSyncedAt: string;
+  latestMatchId: string | null;
+}
 
 @Injectable()
 export class SyncUserMatchesUseCase {
@@ -41,22 +49,27 @@ export class SyncUserMatchesUseCase {
     private readonly pushNotifications: PushNotificationService,
   ) {}
 
-  async execute(userId: string): Promise<{ processed: number }> {
+  async execute(userId: string): Promise<SyncUserMatchesResult> {
     await this.context.requireRiotAccount(userId);
     const account = await this.repo.findRiotAccount(userId);
     if (!account) {
-      return { processed: 0 };
+      return this.emptyResult();
     }
 
     const active = await this.repo.findActiveMissionsForUser(userId);
     if (active.length === 0) {
-      return { processed: 0 };
+      return this.emptyResult();
     }
 
     const matchIds = await this.riotService.getMatchHistory(
       account.puuid,
       account.region,
       SYNC_MATCH_COUNT,
+    );
+
+    const processedRows = await this.repo.findProcessedMatches(userId, matchIds);
+    const processedById = new Map(
+      processedRows.map((row) => [row.matchId, row]),
     );
 
     const eligibleMatches: Array<{
@@ -66,17 +79,25 @@ export class SyncUserMatchesUseCase {
 
     let processed = 0;
     for (const matchId of matchIds) {
-      let match: MatchDto;
-      try {
-        match = await this.riotService.getMatchDetail(matchId, account.region);
-      } catch (e) {
-        this.logger.warn(`Skip match ${matchId}: ${e}`);
-        continue;
+      const cached = processedById.get(matchId);
+      let match: MatchDto | null = null;
+
+      if (cached?.matchPayloadJson) {
+        match = cached.matchPayloadJson as unknown as MatchDto;
+      } else {
+        try {
+          match = await this.riotService.getMatchDetail(matchId, account.region);
+        } catch (e) {
+          this.logger.warn(`Skip match ${matchId}: ${e}`);
+          continue;
+        }
       }
 
-      const seen = await this.repo.isMatchProcessed(userId, matchId);
-      if (!seen) {
-        await this.repo.markMatchProcessed(userId, matchId);
+      if (!cached) {
+        await this.repo.markMatchProcessed(userId, matchId, {
+          gameCreation: match.gameCreation,
+          matchPayloadJson: match as unknown as object,
+        });
         processed++;
       }
 
@@ -102,7 +123,25 @@ export class SyncUserMatchesUseCase {
       );
     }
 
-    return { processed };
+    const latestMatchId = matchIds[0] ?? null;
+    const lastSyncedAt = new Date();
+    await this.repo.updateSyncCursor(userId, { latestMatchId, lastSyncedAt });
+
+    return {
+      processed,
+      status: MissionSyncStatus.UP_TO_DATE,
+      lastSyncedAt: lastSyncedAt.toISOString(),
+      latestMatchId,
+    };
+  }
+
+  private emptyResult(): SyncUserMatchesResult {
+    return {
+      processed: 0,
+      status: MissionSyncStatus.UP_TO_DATE,
+      lastSyncedAt: new Date().toISOString(),
+      latestMatchId: null,
+    };
   }
 
   /** Rebuild progress from recent history, counting only matches on the mission day. */

@@ -6,10 +6,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '@shared/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '@shared/infrastructure/decorators/current-user.decorator';
 import { AcceptMissionOfferUseCase } from '../application/accept-mission-offer.use-case';
 import { GetMissionsByDayUseCase } from '../application/get-missions-by-day.use-case';
+import { GetMissionSyncStatusUseCase } from '../application/get-mission-sync-status.use-case';
 import { GetMissionsHomeUseCase } from '../application/get-missions-home.use-case';
 import { GetPickTodayUseCase } from '../application/get-pick-today.use-case';
 import { CancelActiveMissionUseCase } from '../application/cancel-active-mission.use-case';
@@ -27,7 +29,14 @@ export class MissionsController {
     private readonly rerollOffer: RerollMissionOfferUseCase,
     private readonly cancelActive: CancelActiveMissionUseCase,
     private readonly syncMatches: SyncUserMatchesUseCase,
+    private readonly getSyncStatus: GetMissionSyncStatusUseCase,
   ) {}
+
+  @Get('sync-status')
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  syncStatus(@CurrentUser() userId: string) {
+    return this.getSyncStatus.execute(userId);
+  }
 
   @Get('home')
   home(@CurrentUser() userId: string) {
@@ -69,6 +78,7 @@ export class MissionsController {
   }
 
   @Post('sync')
+  @Throttle({ default: { limit: 6, ttl: 60_000 } })
   sync(@CurrentUser() userId: string) {
     return this.syncMatches.execute(userId);
   }

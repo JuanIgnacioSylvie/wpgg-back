@@ -123,17 +123,19 @@ model EmailVerificationToken {
 }
 
 model RiotAccount {
-  id            String   @id @default(uuid())
-  userId        String   @unique
-  puuid         String   @unique
-  gameName      String
-  tagLine       String
-  region        String
-  summonerId    String
-  accountId     String
-  profileIconId Int?
-  linkedAt      DateTime @default(now())
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  puuid          String    @unique
+  gameName       String
+  tagLine        String
+  region         String
+  summonerId     String
+  accountId      String
+  profileIconId  Int?
+  linkedAt       DateTime  @default(now())
+  lastSyncedAt   DateTime?
+  latestMatchId  String?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model RefreshToken {
@@ -280,11 +282,13 @@ model WpggTransaction {
 }
 
 model ProcessedMatch {
-  id        String   @id @default(uuid())
-  userId    String
-  matchId   String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String   @id @default(uuid())
+  userId           String
+  matchId          String
+  gameCreation     BigInt?
+  matchPayloadJson Json?
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, matchId])
   @@index([userId])
