@@ -36,6 +36,7 @@ import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-m
   exports: [
     PrismaMissionsRepository,
     SyncUserMatchesUseCase,
+    GetMissionSyncStatusUseCase,
     PrismaWalletRepository,
     GetMissionsHomeUseCase,
     GetMissionsByDayUseCase,
