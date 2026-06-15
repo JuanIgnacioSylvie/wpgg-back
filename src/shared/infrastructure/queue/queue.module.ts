@@ -16,6 +16,10 @@ import {
       useFactory: (config: ConfigService) => ({
         connection: {
           url: config.getOrThrow<string>('REDIS_URL'),
+          connectTimeout: 10_000,
+          maxRetriesPerRequest: null,
+          retryStrategy: (times: number) =>
+            times > 8 ? null : Math.min(times * 300, 2_000),
         },
         prefix: config.get<string>('BULL_PREFIX', 'wpgg'),
       }),

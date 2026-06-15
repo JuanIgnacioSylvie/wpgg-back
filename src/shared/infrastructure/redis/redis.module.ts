@@ -15,6 +15,9 @@ import { RedisLockService } from './redis-lock.service';
         const url = config.getOrThrow<string>('REDIS_URL');
         return new Redis(url, {
           maxRetriesPerRequest: null,
+          connectTimeout: 10_000,
+          retryStrategy: (times) =>
+            times > 8 ? null : Math.min(times * 300, 2_000),
         });
       },
     },

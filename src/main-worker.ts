@@ -12,5 +12,7 @@ async function bootstrap() {
   });
   await configureApp(app);
   await listen(app);
+  // eslint-disable-next-line no-console
+  console.log('[worker] HTTP ready (health: /health)');
 }
 bootstrap();

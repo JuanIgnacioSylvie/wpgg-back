@@ -85,6 +85,29 @@ Si tenías un override manual (`npm run start:api` o `start:prod:worker`), bórr
 4. Health check: `/health` (debe responder `{ status: "ok", mode: "worker" }`).
 5. **Réplicas**: mantener **1** instancia del worker (los schedulers usan lock Redis, pero un solo worker es más simple).
 
+### Worker deploy colgado / healthcheck falla
+
+El worker **no** usa `MissionsController`; un fallo de DI en la API no lo afecta. Si el deploy tarda mucho o falla el healthcheck:
+
+| Revisar | Valor esperado en `wpgg-worker` |
+|---------|----------------------------------|
+| `APP_MODE` | `worker` |
+| `REDIS_URL` | `${{Redis.REDIS_URL}}` (referencia al plugin Redis del mismo proyecto) |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
+| `RIOT_API_KEY` | misma que la API |
+| Start command (dashboard) | vacío → usa `railway.toml` (`npm run start:railway`) |
+
+En **logs del worker** (no de la API), buscá:
+
+- `Nest can't resolve dependencies` → falta un provider/export en un módulo compartido
+- `REDIS_URL is required` → falta variable o `APP_MODE` incorrecto
+- `ECONNREFUSED` / `Redis connection` → Redis mal linkeado o caído
+- Si **no** aparece `[worker] HTTP ready` → el proceso crashea antes de escuchar en `/health`
+
+**Mitigación rápida:** en Railway → servicio worker → Settings → desactivar **Healthcheck** temporalmente (el worker no es público; solo necesita el proceso vivo). Luego corregí `REDIS_URL` y volvé a activarlo.
+
+**Pre-deploy:** el worker **omite** migraciones (`[pre-deploy] Skipping prisma migrate deploy on worker service`); las corre la API.
+
 ### 4. Verificación
 
 ```bash
