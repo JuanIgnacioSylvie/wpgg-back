@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { NotificationsCoreModule } from '@modules/notifications/presentation/notifications-core.module';
-import { RiotCoreModule } from '@modules/riot/presentation/riot-core.module';
+import { RiotServiceModule } from '@modules/riot/presentation/riot-service.module';
 import { SharedModule } from '@shared/shared.module';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
 import { AcceptMissionOfferUseCase } from '../application/accept-mission-offer.use-case';
@@ -16,7 +16,7 @@ import { WelcomeMissionService } from '../application/welcome-mission.service';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 
 @Module({
-  imports: [SharedModule, RiotCoreModule, NotificationsCoreModule],
+  imports: [SharedModule, RiotServiceModule, NotificationsCoreModule],
   providers: [
     PrismaMissionsRepository,
     PrismaWalletRepository,

@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
+import { AuthModule } from '@modules/auth/presentation/auth.module';
 import { SharedModule } from '@shared/shared.module';
 import { ExchangeRsoCodeUseCase } from '../application/use-cases/exchange-rso-code.use-case';
 import { GetRsoAuthorizeUrlUseCase } from '../application/use-cases/get-rso-authorize-url.use-case';
@@ -21,9 +22,9 @@ import { RiotRsoIdTokenVerifier } from '../infrastructure/services/riot-rso-id-t
 import { RiotSignOnAxiosService } from '../infrastructure/services/riot-sign-on-axios.service';
 import { RiotServiceAxios } from '../infrastructure/services/riot-service-axios';
 
-/** Riot domain services without HTTP controllers (for worker / missions core). */
+/** Riot domain services without HTTP controllers (used by RiotModule). */
 @Module({
-  imports: [SharedModule],
+  imports: [SharedModule, forwardRef(() => AuthModule)],
   exports: [
     RIOT_SERVICE,
     RIOT_ACCOUNT_REPOSITORY,
