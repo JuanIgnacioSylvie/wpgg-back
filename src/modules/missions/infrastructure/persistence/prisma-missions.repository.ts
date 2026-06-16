@@ -8,6 +8,7 @@ import {
   UserMissionStatus,
 } from '@prisma/client';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
+import { missionExpiresAt } from '../../domain/mission-duration.util';
 
 export type MissionDayWithRelations = Prisma.MissionDayGetPayload<{
   include: {
@@ -189,7 +190,11 @@ export class PrismaMissionsRepository {
     offerId?: string | null;
     status: UserMissionStatus;
     championId?: number;
+    /** When false, welcome / open-ended missions get no expiresAt. */
+    withExpiry?: boolean;
   }) {
+    const acceptedAt = data.status === 'ACTIVE' ? new Date() : undefined;
+    const withExpiry = data.withExpiry !== false;
     return this.prisma.userMission.create({
       data: {
         missionDayId: data.missionDayId,
@@ -197,7 +202,9 @@ export class PrismaMissionsRepository {
         offerId: data.offerId ?? null,
         status: data.status,
         progressJson: {},
-        acceptedAt: data.status === 'ACTIVE' ? new Date() : undefined,
+        acceptedAt,
+        expiresAt:
+          acceptedAt && withExpiry ? missionExpiresAt(acceptedAt) : null,
       },
       include: { template: true },
     });
@@ -255,12 +262,25 @@ export class PrismaMissionsRepository {
     });
   }
 
-  expireActiveMissionsBeforeDate(beforeDate: Date) {
+  expireActiveMissionsPastDeadline(now: Date = new Date()) {
     return this.prisma.userMission.updateMany({
       where: {
         status: 'ACTIVE',
-        missionDay: { calendarDate: { lt: beforeDate } },
         template: { kind: 'STANDARD' },
+        expiresAt: { lt: now },
+      },
+      data: { status: 'EXPIRED' },
+    });
+  }
+
+  /** Legacy rows without expiresAt — still tied to mission calendar day. */
+  expireLegacyActiveMissionsBeforeDate(beforeDate: Date) {
+    return this.prisma.userMission.updateMany({
+      where: {
+        status: 'ACTIVE',
+        template: { kind: 'STANDARD' },
+        expiresAt: null,
+        missionDay: { calendarDate: { lt: beforeDate } },
       },
       data: { status: 'EXPIRED' },
     });

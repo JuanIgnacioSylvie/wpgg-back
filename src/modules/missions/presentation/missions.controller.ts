@@ -16,7 +16,7 @@ import { GetMissionsHomeUseCase } from '../application/get-missions-home.use-cas
 import { GetPickTodayUseCase } from '../application/get-pick-today.use-case';
 import { CancelActiveMissionUseCase } from '../application/cancel-active-mission.use-case';
 import { RerollMissionOfferUseCase } from '../application/reroll-mission-offer.use-case';
-import { SyncUserMatchesUseCase } from '../application/sync-user-matches.use-case';
+import { TriggerMissionSyncUseCase } from '../application/trigger-mission-sync.use-case';
 
 @Controller('missions')
 @UseGuards(JwtAuthGuard)
@@ -28,7 +28,7 @@ export class MissionsController {
     private readonly acceptOffer: AcceptMissionOfferUseCase,
     private readonly rerollOffer: RerollMissionOfferUseCase,
     private readonly cancelActive: CancelActiveMissionUseCase,
-    private readonly syncMatches: SyncUserMatchesUseCase,
+    private readonly syncMatches: TriggerMissionSyncUseCase,
     private readonly getSyncStatus: GetMissionSyncStatusUseCase,
   ) {}
 

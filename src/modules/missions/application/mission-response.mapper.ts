@@ -7,6 +7,7 @@ import {
   UserMission,
   UserMissionStatus,
 } from '@prisma/client';
+import { missionExpiresAt } from '../domain/mission-duration.util';
 
 export interface MissionCardDto {
   id: string;
@@ -39,6 +40,7 @@ export function mapUserMission(
   um: UserMission & { template: MissionTemplate },
   offer?: MissionOffer | null,
 ): MissionCardDto {
+  const endsAt = resolveMissionEndsAt(um);
   return {
     id: um.id,
     offerId: um.offerId ?? offer?.id,
@@ -53,7 +55,23 @@ export function mapUserMission(
     status: um.status,
     progressPercent: um.progressPercent,
     championId: offer?.championId ?? null,
+    endsAt,
   };
+}
+
+function resolveMissionEndsAt(
+  um: UserMission & { template: MissionTemplate },
+): string | undefined {
+  if (um.status !== 'ACTIVE' || um.template.kind === 'WELCOME') {
+    return undefined;
+  }
+  if (um.expiresAt) {
+    return um.expiresAt.toISOString();
+  }
+  if (um.acceptedAt) {
+    return missionExpiresAt(um.acceptedAt).toISOString();
+  }
+  return undefined;
 }
 
 export function mapOffer(

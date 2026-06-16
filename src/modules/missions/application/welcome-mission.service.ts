@@ -20,6 +20,7 @@ export class WelcomeMissionService {
       missionDayId,
       templateId: template.id,
       status: 'ACTIVE',
+      withExpiry: false,
     });
   }
 }

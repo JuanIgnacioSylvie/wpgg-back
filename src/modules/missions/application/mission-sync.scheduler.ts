@@ -27,7 +27,7 @@ export class MissionSyncScheduler implements OnModuleInit, OnModuleDestroy {
   ) {
     this.intervalMs = config.get<number>(
       'MISSION_SYNC_INTERVAL_MS',
-      5 * 60 * 1000,
+      6 * 60 * 60 * 1000,
     );
   }
 

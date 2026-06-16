@@ -12,18 +12,26 @@ import { GetPickTodayUseCase } from '../application/get-pick-today.use-case';
 import { MissionOfferGeneratorService } from '../application/mission-offer-generator.service';
 import { RerollMissionOfferUseCase } from '../application/reroll-mission-offer.use-case';
 import { SyncUserMatchesUseCase } from '../application/sync-user-matches.use-case';
+import { TriggerMissionSyncUseCase } from '../application/trigger-mission-sync.use-case';
 import { UserMissionContextService } from '../application/user-mission-context.service';
 import { WelcomeMissionService } from '../application/welcome-mission.service';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
+import { MissionsQueueModule } from './missions-queue.module';
 
 @Module({
-  imports: [SharedModule, RiotServiceModule, NotificationsCoreModule],
+  imports: [
+    SharedModule,
+    RiotServiceModule,
+    NotificationsCoreModule,
+    MissionsQueueModule.register(),
+  ],
   providers: [
     PrismaMissionsRepository,
     PrismaWalletRepository,
     MissionOfferGeneratorService,
     UserMissionContextService,
     SyncUserMatchesUseCase,
+    TriggerMissionSyncUseCase,
     GetMissionSyncStatusUseCase,
     GetMissionsHomeUseCase,
     GetMissionsByDayUseCase,
@@ -44,6 +52,7 @@ import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-m
     AcceptMissionOfferUseCase,
     RerollMissionOfferUseCase,
     CancelActiveMissionUseCase,
+    TriggerMissionSyncUseCase,
   ],
 })
 export class MissionsCoreModule {}

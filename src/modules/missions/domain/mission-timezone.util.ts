@@ -46,6 +46,29 @@ export function isMatchOnMissionDay(
   return matchDay === missionDayKey(missionCalendarDate);
 }
 
+/** True when the match ended inside the mission's rolling accept window. */
+export function isMatchInMissionWindow(
+  match: {
+    gameEndTimestamp?: number;
+    gameCreation: number;
+    gameDuration: number;
+  },
+  acceptedAt: Date | null,
+  expiresAt: Date | null,
+  missionCalendarDate?: Date,
+): boolean {
+  const endedAt = matchEndedAtMs(match);
+  if (acceptedAt && expiresAt) {
+    return (
+      endedAt >= acceptedAt.getTime() && endedAt < expiresAt.getTime()
+    );
+  }
+  if (missionCalendarDate) {
+    return isMatchOnMissionDay(match, missionCalendarDate);
+  }
+  return false;
+}
+
 /** Milliseconds until 00:00 UTC on the next mission calendar day. */
 export function msUntilEndOfMissionDay(now: Date = new Date()): number {
   const today = missionCalendarDateString(now);

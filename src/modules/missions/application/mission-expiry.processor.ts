@@ -22,13 +22,20 @@ export class MissionExpiryProcessor extends WorkerHost {
       return { expired: 0 };
     }
 
+    const now = new Date();
+    const byDeadline = await this.repo.expireActiveMissionsPastDeadline(now);
+
     const today = todayMissionCalendarDate();
     const yesterday = new Date(today);
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    const result = await this.repo.expireActiveMissionsBeforeDate(yesterday);
-    if (result.count > 0) {
-      this.logger.log(`Expired ${result.count} active missions`);
+    const legacy = await this.repo.expireLegacyActiveMissionsBeforeDate(
+      yesterday,
+    );
+
+    const expired = byDeadline.count + legacy.count;
+    if (expired > 0) {
+      this.logger.log(`Expired ${expired} active missions`);
     }
-    return { expired: result.count };
+    return { expired };
   }
 }

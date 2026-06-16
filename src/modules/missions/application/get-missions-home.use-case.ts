@@ -5,6 +5,7 @@ import {
   pickPrimaryMission,
   pickSecondaryMissions,
 } from './mission-response.mapper';
+import { soonestEndsInSeconds } from '../domain/mission-duration.util';
 import { WelcomeMissionService } from './welcome-mission.service';
 import { MissionOfferGeneratorService } from './mission-offer-generator.service';
 import {
@@ -14,7 +15,6 @@ import {
 import { UserMissionContextService } from './user-mission-context.service';
 import {
   missionCalendarDateString,
-  msUntilEndOfMissionDay,
   WPGG_MISSION_TIMEZONE,
 } from '../domain/mission-timezone.util';
 
@@ -59,18 +59,20 @@ export class GetMissionsHomeUseCase {
     const past = await this.repo.findPastMissions(userId, 30);
     const pastCards = past.map((m) => mapUserMission(m));
 
-    const endsInMs = msUntilEndOfMissionDay();
+    const timedActive = [
+      ...(primary ? [primary] : []),
+      ...secondary,
+    ];
+    const endsInSeconds = soonestEndsInSeconds(timedActive);
 
     return {
       missionDayTimezone: WPGG_MISSION_TIMEZONE,
       missionDate: missionCalendarDateString(),
       welcome,
-      primary: primary
-        ? { ...primary, endsAt: new Date(Date.now() + endsInMs).toISOString() }
-        : null,
+      primary,
       secondary,
       past: pastCards,
-      endsInSeconds: Math.floor(endsInMs / 1000),
+      endsInSeconds,
     };
   }
 }

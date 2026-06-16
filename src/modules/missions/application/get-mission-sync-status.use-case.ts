@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import {
   IRiotService,
   RIOT_SERVICE,
@@ -6,16 +6,21 @@ import {
 import {
   MissionSyncStatus,
   MissionSyncStatusDto,
+  MissionSyncStatusValue,
 } from '../domain/mission-sync-status';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
+import { MissionSyncProducer } from './mission-sync.producer';
 import { UserMissionContextService } from './user-mission-context.service';
 
 @Injectable()
 export class GetMissionSyncStatusUseCase {
+  private readonly logger = new Logger(GetMissionSyncStatusUseCase.name);
+
   constructor(
     private readonly repo: PrismaMissionsRepository,
     private readonly context: UserMissionContextService,
     @Inject(RIOT_SERVICE) private readonly riotService: IRiotService,
+    @Optional() private readonly syncProducer?: MissionSyncProducer,
   ) {}
 
   async execute(userId: string): Promise<MissionSyncStatusDto> {
@@ -52,8 +57,10 @@ export class GetMissionSyncStatusUseCase {
     }
 
     if (!account.latestMatchId) {
+      const status = MissionSyncStatus.UPDATES_AVAILABLE;
+      this.enqueueSyncIfNeeded(userId, status);
       return this.dto(
-        MissionSyncStatus.UPDATES_AVAILABLE,
+        status,
         null,
         null,
         newestMatchId,
@@ -65,12 +72,26 @@ export class GetMissionSyncStatusUseCase {
         ? MissionSyncStatus.UP_TO_DATE
         : MissionSyncStatus.UPDATES_AVAILABLE;
 
+    this.enqueueSyncIfNeeded(userId, status);
+
     return this.dto(
       status,
       account.lastSyncedAt?.toISOString() ?? null,
       account.latestMatchId,
       newestMatchId,
     );
+  }
+
+  private enqueueSyncIfNeeded(
+    userId: string,
+    status: MissionSyncStatusValue,
+  ): void {
+    if (status !== MissionSyncStatus.UPDATES_AVAILABLE || !this.syncProducer) {
+      return;
+    }
+    void this.syncProducer.enqueueUserSync(userId).catch((error) => {
+      this.logger.warn(`Failed to enqueue sync for ${userId}: ${error}`);
+    });
   }
 
   private dto(
