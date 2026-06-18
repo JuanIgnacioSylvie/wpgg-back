@@ -371,6 +371,16 @@ export class PrismaMissionsRepository {
     });
   }
 
+  findProcessedMatchesWithPayload(userId: string) {
+    return this.prisma.processedMatch.findMany({
+      where: {
+        userId,
+        matchPayloadJson: { not: Prisma.DbNull },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   markMatchProcessed(
     userId: string,
     matchId: string,

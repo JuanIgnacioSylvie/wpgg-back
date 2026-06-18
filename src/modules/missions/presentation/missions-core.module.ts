@@ -5,6 +5,7 @@ import { SharedModule } from '@shared/shared.module';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
 import { AcceptMissionOfferUseCase } from '../application/accept-mission-offer.use-case';
 import { CancelActiveMissionUseCase } from '../application/cancel-active-mission.use-case';
+import { GetMissionMatchesUseCase } from '../application/get-mission-matches.use-case';
 import { GetMissionsByDayUseCase } from '../application/get-missions-by-day.use-case';
 import { GetMissionSyncStatusUseCase } from '../application/get-mission-sync-status.use-case';
 import { GetMissionsHomeUseCase } from '../application/get-missions-home.use-case';
@@ -35,6 +36,7 @@ import { MissionsQueueModule } from './missions-queue.module';
     GetMissionSyncStatusUseCase,
     GetMissionsHomeUseCase,
     GetMissionsByDayUseCase,
+    GetMissionMatchesUseCase,
     GetPickTodayUseCase,
     AcceptMissionOfferUseCase,
     RerollMissionOfferUseCase,

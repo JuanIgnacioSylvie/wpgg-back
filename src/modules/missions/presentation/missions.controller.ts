@@ -16,6 +16,7 @@ import { GetMissionsHomeUseCase } from '../application/get-missions-home.use-cas
 import { GetPickTodayUseCase } from '../application/get-pick-today.use-case';
 import { CancelActiveMissionUseCase } from '../application/cancel-active-mission.use-case';
 import { RerollMissionOfferUseCase } from '../application/reroll-mission-offer.use-case';
+import { GetMissionMatchesUseCase } from '../application/get-mission-matches.use-case';
 import { TriggerMissionSyncUseCase } from '../application/trigger-mission-sync.use-case';
 
 @Controller('missions')
@@ -30,6 +31,7 @@ export class MissionsController {
     private readonly cancelActive: CancelActiveMissionUseCase,
     private readonly syncMatches: TriggerMissionSyncUseCase,
     private readonly getSyncStatus: GetMissionSyncStatusUseCase,
+    private readonly getMissionMatches: GetMissionMatchesUseCase,
   ) {}
 
   @Get('sync-status')
@@ -51,6 +53,15 @@ export class MissionsController {
   @Get('pick/today')
   pickToday(@CurrentUser() userId: string) {
     return this.getPickToday.execute(userId);
+  }
+
+  @Get(':missionId/matches')
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  missionMatches(
+    @CurrentUser() userId: string,
+    @Param('missionId') missionId: string,
+  ) {
+    return this.getMissionMatches.execute(userId, missionId);
   }
 
   @Post('pick/:offerId/accept')
