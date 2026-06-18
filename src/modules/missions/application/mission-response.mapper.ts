@@ -8,6 +8,10 @@ import {
   UserMissionStatus,
 } from '@prisma/client';
 import { missionExpiresAt } from '../domain/mission-duration.util';
+import {
+  missionProgressDetail,
+  MissionProgressLineDto,
+} from '../domain/mission-progress-detail.util';
 
 export interface MissionCardDto {
   id: string;
@@ -22,6 +26,7 @@ export interface MissionCardDto {
   rewardWpgg: number;
   status: UserMissionStatus;
   progressPercent: number;
+  progressLines: MissionProgressLineDto[];
   championId?: number | null;
   endsAt?: string;
 }
@@ -54,6 +59,11 @@ export function mapUserMission(
     rewardWpgg: um.template.rewardWpgg,
     status: um.status,
     progressPercent: um.progressPercent,
+    progressLines: missionProgressDetail(
+      um.template.ruleType,
+      um.template.targetJson,
+      um.progressJson,
+    ),
     championId: offer?.championId ?? null,
     endsAt,
   };
@@ -91,6 +101,11 @@ export function mapOffer(
     rewardWpgg: offer.template.rewardWpgg,
     status: accepted ? 'ACTIVE' : 'OFFER',
     progressPercent: 0,
+    progressLines: missionProgressDetail(
+      offer.template.ruleType,
+      offer.template.targetJson,
+      {},
+    ),
     championId: offer.championId,
   };
 }
