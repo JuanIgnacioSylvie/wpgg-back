@@ -1,9 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import {
   MissionDifficulty,
   MissionRuleType,
   MissionTemplate,
 } from '@prisma/client';
+import {
+  MISSION_OFFER_REFRESH_MS,
+  missionOffersRefreshAt,
+} from '../domain/mission-duration.util';
+import { todayMissionCalendarDate } from '../domain/mission-timezone.util';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 
 const RANDOM_CHAMPION_IDS = [
@@ -11,7 +17,16 @@ const RANDOM_CHAMPION_IDS = [
   201, 233, 21, 122, 67, 68, 69, 13, 14, 15, 16, 17, 18, 19, 20,
 ];
 
-const DAILY_OFFER_COUNT = 6;
+export const OFFERS_PER_DIFFICULTY = 2;
+export const OFFER_BATCH_COUNT =
+  OFFERS_PER_DIFFICULTY * 3; /* EASY + MEDIUM + HARD */
+
+export type OfferBatchInfo = {
+  missionDayId: string;
+  batchId: string;
+  offersGeneratedAt: Date;
+  offersRefreshAt: Date;
+};
 
 @Injectable()
 export class MissionOfferGeneratorService {
@@ -19,16 +34,50 @@ export class MissionOfferGeneratorService {
 
   constructor(private readonly repo: PrismaMissionsRepository) {}
 
-  async ensureDailyOffers(missionDayId: string) {
-    const existing = await this.repo.countOffers(missionDayId);
-    if (existing >= DAILY_OFFER_COUNT) {
-      return;
+  /** Ensures the user has a fresh offer pool (6 = 2× each difficulty), refreshed every 24h. */
+  async ensureOfferBatchForUser(userId: string): Promise<OfferBatchInfo> {
+    const now = new Date();
+    const active = await this.repo.findActiveOfferBatch(userId);
+    if (
+      active?.offersGeneratedAt &&
+      active.offersBatchId &&
+      now.getTime() <
+        active.offersGeneratedAt.getTime() + MISSION_OFFER_REFRESH_MS
+    ) {
+      const batchOffers = active.offers.filter(
+        (o) => o.batchId === active.offersBatchId,
+      );
+      if (batchOffers.length >= OFFER_BATCH_COUNT) {
+        return {
+          missionDayId: active.id,
+          batchId: active.offersBatchId,
+          offersGeneratedAt: active.offersGeneratedAt,
+          offersRefreshAt: missionOffersRefreshAt(active.offersGeneratedAt),
+        };
+      }
     }
 
+    const day = await this.repo.getOrCreateMissionDay(
+      userId,
+      todayMissionCalendarDate(),
+    );
+    const batchId = randomUUID();
+    await this.repo.startOfferBatch(day.id, batchId, now);
+    await this.createBatchOffers(day.id, batchId);
+
+    return {
+      missionDayId: day.id,
+      batchId,
+      offersGeneratedAt: now,
+      offersRefreshAt: missionOffersRefreshAt(now),
+    };
+  }
+
+  private async createBatchOffers(missionDayId: string, batchId: string) {
     const templateCount = await this.repo.countMissionTemplates();
     if (templateCount === 0) {
       this.logger.warn(
-        'No mission templates in DB; daily offers cannot be generated',
+        'No mission templates in DB; offer batch cannot be generated',
       );
       return;
     }
@@ -43,7 +92,7 @@ export class MissionOfferGeneratorService {
 
     for (const difficulty of difficulties) {
       const templates = await this.repo.findTemplatesByDifficulty(difficulty);
-      const picked = this.pickRandomDistinct(templates, 2);
+      const picked = this.pickRandomDistinct(templates, OFFERS_PER_DIFFICULTY);
       for (const t of picked) {
         offers.push({
           templateId: t.id,
@@ -56,7 +105,7 @@ export class MissionOfferGeneratorService {
       }
     }
 
-    await this.repo.createOffers(missionDayId, offers);
+    await this.repo.createOffers(missionDayId, batchId, offers);
   }
 
   pickReplacementTemplate(

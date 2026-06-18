@@ -210,32 +210,36 @@ model MissionTemplate {
 }
 
 model MissionDay {
-  id           String         @id @default(uuid())
-  userId       String
-  calendarDate DateTime       @db.Date
-  createdAt    DateTime       @default(now())
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  offers       MissionOffer[]
-  userMissions UserMission[]
+  id                String         @id @default(uuid())
+  userId            String
+  calendarDate      DateTime       @db.Date
+  offersGeneratedAt DateTime?
+  offersBatchId     String?
+  createdAt         DateTime       @default(now())
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offers            MissionOffer[]
+  userMissions      UserMission[]
 
   @@unique([userId, calendarDate])
   @@index([userId, calendarDate])
+  @@index([userId, offersGeneratedAt])
 }
 
 model MissionOffer {
-  id                 String          @id @default(uuid())
-  missionDayId       String
-  templateId         String
-  slot               Int
-  championId         Int?
+  id                  String          @id @default(uuid())
+  missionDayId        String
+  templateId          String
+  slot                Int
+  batchId             String
+  championId          Int?
   rerolledFromOfferId String?
-  createdAt          DateTime        @default(now())
-  missionDay         MissionDay      @relation(fields: [missionDayId], references: [id], onDelete: Cascade)
-  template           MissionTemplate @relation(fields: [templateId], references: [id])
-  userMission        UserMission?
+  createdAt           DateTime        @default(now())
+  missionDay          MissionDay      @relation(fields: [missionDayId], references: [id], onDelete: Cascade)
+  template            MissionTemplate @relation(fields: [templateId], references: [id])
+  userMission         UserMission?
 
-  @@unique([missionDayId, slot])
-  @@index([missionDayId])
+  @@unique([missionDayId, slot, batchId])
+  @@index([missionDayId, batchId])
 }
 
 model UserMission {

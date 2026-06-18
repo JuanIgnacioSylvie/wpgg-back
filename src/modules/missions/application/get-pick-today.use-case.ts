@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { mapOffer } from './mission-response.mapper';
-import { MissionOfferGeneratorService } from './mission-offer-generator.service';
 import {
-  MissionDayWithRelations,
-  PrismaMissionsRepository,
-} from '../infrastructure/persistence/prisma-missions.repository';
+  OFFERS_PER_DIFFICULTY,
+  MissionOfferGeneratorService,
+} from './mission-offer-generator.service';
+import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 import { UserMissionContextService } from './user-mission-context.service';
-import {
-  missionCalendarDateString,
-  WPGG_MISSION_TIMEZONE,
-} from '../domain/mission-timezone.util';
+import { secondsUntil } from '../domain/mission-duration.util';
+import { WPGG_MISSION_TIMEZONE } from '../domain/mission-timezone.util';
+
+const MAX_ACTIVE_MISSIONS = 3;
+const MAX_HARD_ACTIVE = 1;
 
 @Injectable()
 export class GetPickTodayUseCase {
@@ -21,36 +22,41 @@ export class GetPickTodayUseCase {
 
   async execute(userId: string) {
     await this.context.requireRiotAccount(userId);
-    const today = this.context.todayCalendarDate();
 
-    const day = await this.repo.getOrCreateMissionDay(userId, today);
-    await this.offerGen.ensureDailyOffers(day.id);
+    const batch = await this.offerGen.ensureOfferBatchForUser(userId);
+    const day = await this.repo.findMissionDayWithBatchOffers(
+      userId,
+      batch.missionDayId,
+    );
+    const batchOffers =
+      day?.offers.filter((o) => o.batchId === batch.batchId) ?? [];
 
-    const refreshed: MissionDayWithRelations | null =
-      await this.repo.findMissionDay(userId, day.calendarDate);
     const acceptedOfferIds = new Set(
-      (refreshed?.userMissions ?? [])
-        .filter((m) => m.offerId)
-        .map((m) => m.offerId as string),
+      batchOffers
+        .filter((o) => o.userMission)
+        .map((o) => o.id),
     );
 
-    const selectedCount = (refreshed?.userMissions ?? []).filter(
-      (m) =>
-        ['ACTIVE', 'COMPLETED'].includes(m.status) &&
-        m.template.kind === 'STANDARD',
-    ).length;
+    const activeCount =
+      await this.repo.countActiveStandardMissionsForUser(userId);
+    const hardActiveCount =
+      await this.repo.countHardActiveMissionsForUser(userId);
 
-    const offers = (refreshed?.offers ?? []).map((o) =>
+    const offers = batchOffers.map((o) =>
       mapOffer(o, acceptedOfferIds.has(o.id)),
     );
 
     return {
       missionDayTimezone: WPGG_MISSION_TIMEZONE,
-      date: missionCalendarDateString(),
       offers,
-      selectedCount,
-      maxSelectable: 3,
-      maxHard: 1,
+      activeCount,
+      hardActiveCount,
+      maxActive: MAX_ACTIVE_MISSIONS,
+      maxHard: MAX_HARD_ACTIVE,
+      offersPerDifficulty: OFFERS_PER_DIFFICULTY,
+      offersGeneratedAt: batch.offersGeneratedAt.toISOString(),
+      offersRefreshAt: batch.offersRefreshAt.toISOString(),
+      offersRefreshInSeconds: secondsUntil(batch.offersRefreshAt),
     };
   }
 }

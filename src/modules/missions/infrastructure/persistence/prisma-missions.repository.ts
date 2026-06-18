@@ -8,7 +8,7 @@ import {
   UserMissionStatus,
 } from '@prisma/client';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
-import { missionExpiresAt } from '../../domain/mission-duration.util';
+import { missionExpiresAt, MISSION_OFFER_REFRESH_MS } from '../../domain/mission-duration.util';
 
 export type MissionDayWithRelations = Prisma.MissionDayGetPayload<{
   include: {
@@ -90,12 +90,18 @@ export class PrismaMissionsRepository {
     });
   }
 
-  countOffers(missionDayId: string) {
-    return this.prisma.missionOffer.count({ where: { missionDayId } });
+  countOffers(missionDayId: string, batchId?: string) {
+    return this.prisma.missionOffer.count({
+      where: {
+        missionDayId,
+        ...(batchId ? { batchId } : {}),
+      },
+    });
   }
 
   createOffers(
     missionDayId: string,
+    batchId: string,
     offers: Array<{
       templateId: string;
       slot: number;
@@ -106,11 +112,75 @@ export class PrismaMissionsRepository {
     return this.prisma.missionOffer.createMany({
       data: offers.map((o) => ({
         missionDayId,
+        batchId,
         templateId: o.templateId,
         slot: o.slot,
         championId: o.championId,
         rerolledFromOfferId: o.rerolledFromOfferId,
       })),
+    });
+  }
+
+  findActiveOfferBatch(userId: string) {
+    const minGeneratedAt = new Date(Date.now() - MISSION_OFFER_REFRESH_MS);
+    return this.prisma.missionDay.findFirst({
+      where: {
+        userId,
+        offersGeneratedAt: { gte: minGeneratedAt },
+        offersBatchId: { not: null },
+      },
+      orderBy: { offersGeneratedAt: 'desc' },
+      include: {
+        offers: {
+          include: { template: true, userMission: true },
+        },
+      },
+    });
+  }
+
+  startOfferBatch(missionDayId: string, batchId: string, generatedAt: Date) {
+    return this.prisma.missionDay.update({
+      where: { id: missionDayId },
+      data: {
+        offersBatchId: batchId,
+        offersGeneratedAt: generatedAt,
+      },
+      include: {
+        offers: {
+          include: { template: true, userMission: true },
+        },
+      },
+    });
+  }
+
+  findMissionDayWithBatchOffers(userId: string, missionDayId: string) {
+    return this.prisma.missionDay.findFirst({
+      where: { id: missionDayId, userId },
+      include: {
+        offers: {
+          include: { template: true, userMission: true },
+        },
+      },
+    });
+  }
+
+  countActiveStandardMissionsForUser(userId: string) {
+    return this.prisma.userMission.count({
+      where: {
+        status: 'ACTIVE',
+        template: { kind: 'STANDARD' },
+        missionDay: { userId },
+      },
+    });
+  }
+
+  countHardActiveMissionsForUser(userId: string) {
+    return this.prisma.userMission.count({
+      where: {
+        status: 'ACTIVE',
+        template: { difficulty: 'HARD', kind: 'STANDARD' },
+        missionDay: { userId },
+      },
     });
   }
 

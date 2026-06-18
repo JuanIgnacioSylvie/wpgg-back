@@ -10,10 +10,7 @@ import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persisten
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import { mapOffer } from './mission-response.mapper';
 import { MissionOfferGeneratorService } from './mission-offer-generator.service';
-import {
-  MissionDayWithRelations,
-  PrismaMissionsRepository,
-} from '../infrastructure/persistence/prisma-missions.repository';
+import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 import { UserMissionContextService } from './user-mission-context.service';
 
 @Injectable()
@@ -36,12 +33,21 @@ export class RerollMissionOfferUseCase {
       throw new BadRequestException('Cannot reroll an accepted mission');
     }
 
-    const dayOffers: MissionDayWithRelations | null =
-      await this.repo.findMissionDay(
-        userId,
-        offer.missionDay.calendarDate,
-      );
-    const excludeIds = (dayOffers?.offers ?? []).map((o) => o.templateId);
+    const batch = await this.offerGen.ensureOfferBatchForUser(userId);
+    if (
+      offer.batchId !== batch.batchId ||
+      offer.missionDayId !== batch.missionDayId
+    ) {
+      throw new BadRequestException('Offer is no longer available');
+    }
+
+    const dayOffers = await this.repo.findMissionDayWithBatchOffers(
+      userId,
+      offer.missionDayId,
+    );
+    const excludeIds = (dayOffers?.offers ?? [])
+      .filter((o) => o.batchId === batch.batchId)
+      .map((o) => o.templateId);
     const templates = await this.repo.findTemplatesByDifficulty(
       offer.template.difficulty,
     );

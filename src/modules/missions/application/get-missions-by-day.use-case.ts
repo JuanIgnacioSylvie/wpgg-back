@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { mapUserMission } from './mission-response.mapper';
-import { MissionOfferGeneratorService } from './mission-offer-generator.service';
 import {
   MissionDayWithRelations,
   PrismaMissionsRepository,
@@ -16,7 +15,6 @@ export class GetMissionsByDayUseCase {
   constructor(
     private readonly repo: PrismaMissionsRepository,
     private readonly context: UserMissionContextService,
-    private readonly offerGen: MissionOfferGeneratorService,
   ) {}
 
   async execute(userId: string, dateParam?: string) {
@@ -25,11 +23,8 @@ export class GetMissionsByDayUseCase {
       ? this.context.parseCalendarDateParam(dateParam)
       : this.context.todayCalendarDate();
 
-    const day = await this.repo.getOrCreateMissionDay(userId, calendarDate);
-    await this.offerGen.ensureDailyOffers(day.id);
-
     const refreshed: MissionDayWithRelations | null =
-      await this.repo.findMissionDay(userId, day.calendarDate);
+      await this.repo.findMissionDay(userId, calendarDate);
     if (!refreshed) {
       return { date: dateParam ?? '', missions: [], isToday: false };
     }

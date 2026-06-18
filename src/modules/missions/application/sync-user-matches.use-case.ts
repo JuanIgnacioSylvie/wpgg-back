@@ -115,7 +115,19 @@ export class SyncUserMatchesUseCase {
       eligibleMatches.push({ match, me });
     }
 
+    const now = new Date();
+    const hasExpired = active.some(
+      (mission) =>
+        mission.expiresAt && mission.expiresAt.getTime() <= now.getTime(),
+    );
+    if (hasExpired) {
+      await this.repo.expireActiveMissionsPastDeadline(now);
+    }
+
     for (const mission of active) {
+      if (mission.expiresAt && mission.expiresAt.getTime() <= now.getTime()) {
+        continue;
+      }
       await this.recomputeMissionProgress(
         mission,
         eligibleMatches,

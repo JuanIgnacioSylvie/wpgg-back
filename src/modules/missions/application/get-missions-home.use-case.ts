@@ -7,11 +7,7 @@ import {
 } from './mission-response.mapper';
 import { soonestEndsInSeconds } from '../domain/mission-duration.util';
 import { WelcomeMissionService } from './welcome-mission.service';
-import { MissionOfferGeneratorService } from './mission-offer-generator.service';
-import {
-  MissionDayWithRelations,
-  PrismaMissionsRepository,
-} from '../infrastructure/persistence/prisma-missions.repository';
+import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 import { UserMissionContextService } from './user-mission-context.service';
 import {
   missionCalendarDateString,
@@ -23,7 +19,6 @@ export class GetMissionsHomeUseCase {
   constructor(
     private readonly repo: PrismaMissionsRepository,
     private readonly context: UserMissionContextService,
-    private readonly offerGen: MissionOfferGeneratorService,
     private readonly welcomeMission: WelcomeMissionService,
   ) {}
 
@@ -32,19 +27,11 @@ export class GetMissionsHomeUseCase {
     const today = this.context.todayCalendarDate();
 
     const day = await this.repo.getOrCreateMissionDay(userId, today);
-    await this.offerGen.ensureDailyOffers(day.id);
     await this.welcomeMission.ensureForUser(userId, day.id);
 
-    const refreshed: MissionDayWithRelations | null =
-      await this.repo.findMissionDay(userId, day.calendarDate);
-    const activeMissions =
-      refreshed?.userMissions.filter((m) => m.status === 'ACTIVE') ?? [];
-    const activeCards = activeMissions.map((m) => {
-      const offer = refreshed?.offers.find(
-        (o: MissionDayWithRelations['offers'][number]) => o.id === m.offerId,
-      );
-      return mapUserMission(m, offer);
-    });
+    // Rolling 24h missions can stay ACTIVE across calendar days — list all of them.
+    const activeMissions = await this.repo.findActiveMissionsForUser(userId);
+    const activeCards = activeMissions.map((m) => mapUserMission(m, m.offer));
 
     const welcomeMission = await this.repo.findWelcomeMissionForUser(userId);
     const welcome =
