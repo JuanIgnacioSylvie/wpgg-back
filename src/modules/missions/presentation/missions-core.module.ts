@@ -50,6 +50,7 @@ import { MissionsQueueModule } from './missions-queue.module';
     PrismaWalletRepository,
     GetMissionsHomeUseCase,
     GetMissionsByDayUseCase,
+    GetMissionMatchesUseCase,
     GetPickTodayUseCase,
     AcceptMissionOfferUseCase,
     RerollMissionOfferUseCase,
