@@ -15,7 +15,7 @@ import {
   MissionTemplateTarget,
   progressPercentFromState,
 } from '../domain/mission-rule.engine';
-import { isMatchInMissionWindow } from '../domain/mission-timezone.util';
+import { isMatchInMissionWindow, matchEndedAtMs } from '../domain/mission-timezone.util';
 import { MissionSyncStatus } from '../domain/mission-sync-status';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
 import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
@@ -185,7 +185,11 @@ export class SyncUserMatchesUseCase {
     let progress = initialProgress(mission.template.ruleType);
     const missionDay = mission.missionDay.calendarDate;
 
-    for (const { match, me } of eligibleMatches) {
+    const chronological = [...eligibleMatches].sort(
+      (a, b) => matchEndedAtMs(a.match) - matchEndedAtMs(b.match),
+    );
+
+    for (const { match, me } of chronological) {
       if (
         !isMatchInMissionWindow(
           match,

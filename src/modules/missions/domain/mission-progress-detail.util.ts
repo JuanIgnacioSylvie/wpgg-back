@@ -74,7 +74,7 @@ export function missionProgressDetail(
     case 'WIN_STREAK_NO_DEATH':
     case 'WIN_STREAK':
       return [
-        line((progress.bestStreak as number) ?? 0, target.streakWins ?? 10),
+        line((progress.currentStreak as number) ?? 0, target.streakWins ?? 10),
       ];
     case 'GAMES_WIN_STREAK_PENTAKILL':
       return [

@@ -407,8 +407,8 @@ export function progressPercentFromState(
     }
     case 'WIN_STREAK_NO_DEATH':
     case 'WIN_STREAK': {
-      const best = (progress.bestStreak as number) ?? 0;
-      return clampPercent((best / (t.streakWins ?? 10)) * 100);
+      const current = (progress.currentStreak as number) ?? 0;
+      return clampPercent((current / (t.streakWins ?? 10)) * 100);
     }
     case 'GAMES_WIN_STREAK_PENTAKILL': {
       if (progress.bestQualified) {
