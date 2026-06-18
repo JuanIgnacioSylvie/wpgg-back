@@ -12,6 +12,7 @@ import {
   missionProgressDetail,
   MissionProgressLineDto,
 } from '../domain/mission-progress-detail.util';
+import { resolveMissionChampion } from '../domain/mission-champion-catalog.util';
 
 export interface MissionCardDto {
   id: string;
@@ -28,6 +29,8 @@ export interface MissionCardDto {
   progressPercent: number;
   progressLines: MissionProgressLineDto[];
   championId?: number | null;
+  championKey?: string | null;
+  championName?: string | null;
   endsAt?: string;
 }
 
@@ -46,6 +49,7 @@ export function mapUserMission(
   offer?: MissionOffer | null,
 ): MissionCardDto {
   const endsAt = resolveMissionEndsAt(um);
+  const champion = resolveMissionChampion(offer?.championId ?? null);
   return {
     id: um.id,
     offerId: um.offerId ?? offer?.id,
@@ -65,6 +69,8 @@ export function mapUserMission(
       um.progressJson,
     ),
     championId: offer?.championId ?? null,
+    championKey: champion?.key ?? null,
+    championName: champion?.name ?? null,
     endsAt,
   };
 }
@@ -88,6 +94,7 @@ export function mapOffer(
   offer: MissionOffer & { template: MissionTemplate },
   accepted: boolean,
 ): MissionCardDto {
+  const champion = resolveMissionChampion(offer.championId);
   return {
     id: offer.id,
     offerId: offer.id,
@@ -107,6 +114,8 @@ export function mapOffer(
       {},
     ),
     championId: offer.championId,
+    championKey: champion?.key ?? null,
+    championName: champion?.name ?? null,
   };
 }
 
