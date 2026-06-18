@@ -308,7 +308,7 @@ export class PrismaMissionsRepository {
         status: { in: ['COMPLETED', 'EXPIRED'] },
         missionDay: { userId },
       },
-      include: { template: true, missionDay: true },
+      include: { template: true, missionDay: true, offer: true },
       orderBy: [{ completedAt: 'desc' }, { updatedAt: 'desc' }],
       take: limit,
     });

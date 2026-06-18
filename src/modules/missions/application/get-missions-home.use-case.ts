@@ -44,7 +44,7 @@ export class GetMissionsHomeUseCase {
     const secondary = pickSecondaryMissions(standardActive, primary);
 
     const past = await this.repo.findPastMissions(userId, 30);
-    const pastCards = past.map((m) => mapUserMission(m));
+    const pastCards = past.map((m) => mapUserMission(m, m.offer));
 
     const timedActive = [
       ...(primary ? [primary] : []),
