@@ -1,5 +1,4 @@
 -- AlterEnum
-ALTER TYPE "UserMissionStatus" ADD VALUE 'CLAIMED';
-
--- Missions already rewarded before claim flow should stay in pass missions.
-UPDATE "UserMission" SET status = 'CLAIMED' WHERE status = 'COMPLETED';
+-- PostgreSQL requires new enum values to be committed before use.
+-- Backfill runs in the next migration.
+ALTER TYPE "UserMissionStatus" ADD VALUE IF NOT EXISTS 'CLAIMED';
