@@ -158,7 +158,7 @@ export class PushNotificationService implements OnModuleInit {
     await this.sendToUser(userId, {
       type: 'MISSION_COMPLETED',
       title: 'Mission completed!',
-      body: `${input.titleEn} — +${input.rewardWpgg} WPGG`,
+      body: `${input.titleEn} — claim ${input.rewardWpgg} WPGG`,
       route: '/home',
     });
   }

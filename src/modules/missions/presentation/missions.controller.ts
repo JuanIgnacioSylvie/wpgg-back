@@ -15,6 +15,7 @@ import { GetMissionSyncStatusUseCase } from '../application/get-mission-sync-sta
 import { GetMissionsHomeUseCase } from '../application/get-missions-home.use-case';
 import { GetPickTodayUseCase } from '../application/get-pick-today.use-case';
 import { CancelActiveMissionUseCase } from '../application/cancel-active-mission.use-case';
+import { ClaimMissionRewardUseCase } from '../application/claim-mission-reward.use-case';
 import { RerollMissionOfferUseCase } from '../application/reroll-mission-offer.use-case';
 import { GetMissionMatchesUseCase } from '../application/get-mission-matches.use-case';
 import { TriggerMissionSyncUseCase } from '../application/trigger-mission-sync.use-case';
@@ -29,6 +30,7 @@ export class MissionsController {
     private readonly acceptOffer: AcceptMissionOfferUseCase,
     private readonly rerollOffer: RerollMissionOfferUseCase,
     private readonly cancelActive: CancelActiveMissionUseCase,
+    private readonly claimReward: ClaimMissionRewardUseCase,
     private readonly syncMatches: TriggerMissionSyncUseCase,
     private readonly getSyncStatus: GetMissionSyncStatusUseCase,
     private readonly getMissionMatches: GetMissionMatchesUseCase,
@@ -86,6 +88,14 @@ export class MissionsController {
     @Param('missionId') missionId: string,
   ) {
     return this.cancelActive.execute(userId, missionId);
+  }
+
+  @Post(':missionId/claim')
+  claimMissionReward(
+    @CurrentUser() userId: string,
+    @Param('missionId') missionId: string,
+  ) {
+    return this.claimReward.execute(userId, missionId);
   }
 
   @Post('sync')

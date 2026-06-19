@@ -207,7 +207,7 @@ export class PrismaMissionsRepository {
     return this.prisma.userMission.count({
       where: {
         missionDayId,
-        status: { in: ['ACTIVE', 'COMPLETED'] },
+        status: UserMissionStatus.ACTIVE,
         template: { kind: 'STANDARD' },
       },
     });
@@ -217,7 +217,7 @@ export class PrismaMissionsRepository {
     return this.prisma.userMission.count({
       where: {
         missionDayId,
-        status: { in: ['ACTIVE', 'COMPLETED'] },
+        status: UserMissionStatus.ACTIVE,
         template: { difficulty: 'HARD', kind: 'STANDARD' },
       },
     });
@@ -302,10 +302,22 @@ export class PrismaMissionsRepository {
     });
   }
 
+  findCompletedUnclaimedMissions(userId: string, limit = 50) {
+    return this.prisma.userMission.findMany({
+      where: {
+        status: UserMissionStatus.COMPLETED,
+        missionDay: { userId },
+      },
+      include: { template: true, missionDay: true, offer: true },
+      orderBy: [{ completedAt: 'desc' }, { updatedAt: 'desc' }],
+      take: limit,
+    });
+  }
+
   findPastMissions(userId: string, limit = 50) {
     return this.prisma.userMission.findMany({
       where: {
-        status: { in: ['COMPLETED', 'EXPIRED'] },
+        status: { in: [UserMissionStatus.CLAIMED, UserMissionStatus.EXPIRED] },
         missionDay: { userId },
       },
       include: { template: true, missionDay: true, offer: true },
@@ -421,7 +433,7 @@ export class PrismaMissionsRepository {
   countCompletedMissionsForUser(userId: string) {
     return this.prisma.userMission.count({
       where: {
-        status: 'COMPLETED',
+        status: UserMissionStatus.CLAIMED,
         missionDay: { userId },
       },
     });

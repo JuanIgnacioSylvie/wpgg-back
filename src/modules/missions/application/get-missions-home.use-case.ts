@@ -43,6 +43,9 @@ export class GetMissionsHomeUseCase {
     const primary = pickPrimaryMission(standardActive);
     const secondary = pickSecondaryMissions(standardActive, primary);
 
+    const completed = await this.repo.findCompletedUnclaimedMissions(userId, 30);
+    const completedCards = completed.map((m) => mapUserMission(m, m.offer));
+
     const past = await this.repo.findPastMissions(userId, 30);
     const pastCards = past.map((m) => mapUserMission(m, m.offer));
 
@@ -58,6 +61,7 @@ export class GetMissionsHomeUseCase {
       welcome,
       primary,
       secondary,
+      completed: completedCards,
       past: pastCards,
       endsInSeconds,
     };

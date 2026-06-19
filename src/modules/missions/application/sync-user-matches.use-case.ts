@@ -18,7 +18,6 @@ import {
 import { isMatchInMissionWindow, matchEndedAtMs } from '../domain/mission-timezone.util';
 import { MissionSyncStatus } from '../domain/mission-sync-status';
 import { PrismaMissionsRepository } from '../infrastructure/persistence/prisma-missions.repository';
-import { PrismaWalletRepository } from '@modules/wallet/infrastructure/persistence/prisma-wallet.repository';
 import { PushNotificationService } from '@modules/notifications/application/push-notification.service';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service';
 import { UserMissionContextService } from './user-mission-context.service';
@@ -42,7 +41,6 @@ export class SyncUserMatchesUseCase {
 
   constructor(
     private readonly repo: PrismaMissionsRepository,
-    private readonly walletRepo: PrismaWalletRepository,
     private readonly prisma: PrismaService,
     private readonly context: UserMissionContextService,
     @Inject(RIOT_SERVICE) private readonly riotService: IRiotService,
@@ -210,16 +208,6 @@ export class SyncUserMatchesUseCase {
       : UserMissionStatus.ACTIVE;
 
     await this.prisma.$transaction(async (tx) => {
-      if (completed) {
-        await this.walletRepo.creditMissionReward(
-          userId,
-          mission.template.rewardWpgg,
-          `mission:${mission.id}`,
-          `Mission completed: ${mission.template.titleEn}`,
-          tx,
-        );
-      }
-
       await tx.userMission.update({
         where: { id: mission.id },
         data: {
@@ -279,16 +267,6 @@ export class SyncUserMatchesUseCase {
       : UserMissionStatus.ACTIVE;
 
     await this.prisma.$transaction(async (tx) => {
-      if (completed) {
-        await this.walletRepo.creditMissionReward(
-          userId,
-          mission.template.rewardWpgg,
-          `mission:${mission.id}`,
-          `Mission completed: ${mission.template.titleEn}`,
-          tx,
-        );
-      }
-
       await tx.userMission.update({
         where: { id: mission.id },
         data: {
